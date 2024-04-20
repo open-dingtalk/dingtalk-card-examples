@@ -1,0 +1,50 @@
+package com.card.java;
+
+import lombok.extern.slf4j.Slf4j;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.card.java.models.CardCallbackMessage;
+import com.card.java.models.CardPrivateData;
+import com.card.java.models.CardPrivateDataWrapper;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import com.dingtalk.open.app.api.callback.OpenDingTalkCallbackListener;
+
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+public class CardCallbackHandler implements OpenDingTalkCallbackListener<String, JSONObject> {
+
+  @Autowired
+  private JSONObjectUtils jsonObjectUtils;
+
+  @Override
+  public JSONObject execute(String messageString) {
+    log.info("card callback message: " + messageString);
+    JSONObject userPrivateData = new JSONObject();
+
+    CardCallbackMessage message = JSON.parseObject(messageString, CardCallbackMessage.class);
+    CardPrivateDataWrapper content = JSON.parseObject(message.getContent(), CardPrivateDataWrapper.class);
+    CardPrivateData cardPrivateData = content.getCardPrivateData();
+    JSONObject params = cardPrivateData.getParams();
+    String local_input = params.getString("local_input");
+
+    if (local_input != null) {
+      userPrivateData.put("private_input", local_input);
+      userPrivateData.put("submitted", true);
+    }
+
+    JSONObject cardUpdateOptions = new JSONObject();
+    cardUpdateOptions.put("updateCardDataByKey", true);
+    cardUpdateOptions.put("updatePrivateDataByKey", true);
+
+    JSONObject response = new JSONObject();
+    response.put("cardUpdateOptions", cardUpdateOptions);
+    response.put("userPrivateData",
+        new JSONObject().fluentPut("cardParamMap", jsonObjectUtils.convertJSONValuesToString(userPrivateData)));
+
+    log.info("card callback response: " + JSON.toJSONString(response));
+    return response;
+  }
+}

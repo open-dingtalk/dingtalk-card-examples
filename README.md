@@ -1,10 +1,119 @@
-# dingtalk-card-examples
+# 项目介绍
 
-钉钉互动卡片在各种业务场景下的使用例子，例子包含可导入的卡片模板、4 种语言（Java、Golang、Python、Node.js）的代码示例、卡片效果视频演示。
+该项目包含钉钉互动卡片在各种业务场景下的使用例子，具体的卡片使用示例介绍以及视频演示参考这篇文档：[卡片使用示例](https://wolai.dingtalk.com/u5hVaGKEbw81Cc9zREDY6H)。
 
-关于钉钉互动卡片的 5W1H：[感知卡片](https://wolai.dingtalk.com/upuadGKed3jjiQ9Y3bbFFQ)
+不知道钉钉互动卡片是什么？参考这篇文档：[感知卡片](https://wolai.dingtalk.com/upuadGKed3jjiQ9Y3bbFFQ)。
 
-# examples
+examples 目录下的每一个文件夹都是一个独立的卡片使用示例，一般包含以下这些内容：
 
+- 卡片例子介绍 `README.md`
+- 卡片预览图片 `{folder_name}.png`
+- 导出的卡片模板 JSON 文件 `{folder_name}.json`（可用于导入到自己的卡片模板里查看具体模板内容及相关配置）
+- Python 代码示例 `python/index.py`
+- Java 代码示例 `java/src/main/java/com/card/java/*.java`
+- Node.js 代码示例 `nodejs/index.ts`
+- Golang 代码示例 `golang/index.go`
 
+# 如何启动？
+
+所有示例代码都是通过 [服务端 Stream 模式](https://open.dingtalk.com/document/resourcedownload/introduction-to-stream-mode) 启动运行的。钉钉 Stream 模式可以用于多种场景的回调，包括事件订阅、机器人接收消息、卡片回调等。相关教程：[Stream Mode](https://opensource.dingtalk.com/developerpedia/docs/explore/tutorials/stream/overview)。
+
+下面以 example/helloworld 为例，验证卡片开发环境是否已经成功配置。该例子需要完成[创建企业内部机器人](https://open.dingtalk.com/document/orgapp/the-creation-and-installation-of-the-application-robot-in-the)的前置流程，不同语言的聊天机器人教程参考：[聊天机器人](https://opensource.dingtalk.com/developerpedia/docs/category/%E8%81%8A%E5%A4%A9%E6%9C%BA%E5%99%A8%E4%BA%BA)。
+
+该示例的视频演示：[hello world](https://wolai.dingtalk.com/89gp6tEDFQaXTM2RqDsd4f)。
+
+以下编程语言（Python、Java、Golang、Bun 或 Node.js）的环境都可以通过 [asdf](https://asdf-vm.com/zh-hans/guide/introduction.html) 来安装并管理版本。
+
+应用 client-id 和 client-secret 的**默认值**会分别从环境变量 `DINGTALK_APP_CLIENT_ID` 和 `DINGTALK_APP_CLIENT_SECRET` 中读取。
+
+## Python
+
+参考 Python 版本：3.10.13
+
+依赖安装：
+
+```bash
+cd python
+pip install -r requirements.txt
+```
+
+执行命令：
+
+```bash
+python index.py --client_id <client_id> --client_secret <client_secret>
+```
+
+## Java
+
+参考 Java 版本：openjdk-21.0.2
+
+依赖安装：
+
+```bash
+cd java
+mvn clean install
+```
+
+在 ./src/main/resources/application.properties 中添加应用凭据的配置：
+
+```
+dingtalk.app.client-id=<client_id>
+dingtalk.app.client-secret=<client_secret>
+```
+
+执行命令：
+
+```bash
+mvn spring-boot:run
+```
+
+## Node.js
+
+可以使用 Bun 直接运行 ts 文件，参考 Bun 版本：1.1.4
+
+依赖安装：
+
+```bash
+cd nodejs
+bun install
+```
+
+执行命令：
+
+```bash
+bun run index.ts --clientId <client_id> --clientSecret <client_secret>
+```
+
+## Golang
+
+参考 Golang 版本：1.20
+
+依赖安装：
+
+```bash
+cd golang
+go mod tidy
+```
+
+执行命令：
+
+```bash
+go run index.go --client_id <client_id> --client_secret <client_secret>
+```
+
+# 注意事项
+
+Steram 没有收到卡片交互组件的回传请求事件回调通常可以从以下三个方面进行排查：
+
+1. 检查一下是否注册 topic 为 `/v1.0/card/instances/callback` 的卡片回调。
+2. 检查一下创建卡片时是否传入 callbackType="STREAM" 参数。
+3. 检查一下同一个 client-id 和 client-secret 是否启动了不止一个 Stream 服务。请务必保证一个 client-id 同一时间只启动一个 Stream 服务。如果有线上 Stream 服务在运行，希望在线下启动 Stream 服务开发调试，可以额外创建一个开发调试用的 client-id，线上线下环境分别设置系统环境变量使用不同的 client-id 进行隔离，避免相互干扰。
+
+其它注意事项：[互动卡片 FAQ](https://open.dingtalk.com/document/orgapp/faq-card)
+
+# 反馈
+
+您的反馈会帮助我们进一步完善钉钉互动卡片，欢迎您扫码反馈。
+
+<img src="feedback_form_qr_code.png" width="320" />
 

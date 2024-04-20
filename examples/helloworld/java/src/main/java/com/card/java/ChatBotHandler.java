@@ -1,0 +1,212 @@
+package com.card.java;
+
+import com.alibaba.fastjson.JSONObject;
+import com.dingtalk.open.app.api.callback.OpenDingTalkCallbackListener;
+import com.dingtalk.open.app.api.models.bot.ChatbotMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
+
+@Slf4j
+@Component
+public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessage, Void> {
+
+  @Autowired
+  private AccessTokenService accessTokenService;
+
+  @Autowired
+  private JSONObjectUtils jsonObjectUtils;
+
+  @Value("${openApiHost}")
+  private String openApiHost;
+
+  @Value("${dingtalk.app.client-id}")
+  private String clientId;
+
+  public static String genCardId(ChatbotMessage message) throws NoSuchAlgorithmException {
+    String factor = message.getSenderId() + '_' + message.getSenderCorpId() + '_' + message.getConversationId() + '_'
+        + message.getMsgId() + '_' + UUID.randomUUID().toString();
+    MessageDigest digest = MessageDigest.getInstance("SHA-256");
+    byte[] hash = digest.digest(factor.getBytes(StandardCharsets.UTF_8));
+    StringBuilder hexString = new StringBuilder();
+    for (byte b : hash) {
+      String hex = Integer.toHexString(0xff & b);
+      if (hex.length() == 1)
+        hexString.append('0');
+      hexString.append(hex);
+    }
+    return hexString.toString();
+  }
+
+  public String createAndDeliverCard(ChatbotMessage message, String cardTemplateId, JSONObject cardData,
+      JSONObject options)
+      throws IOException, InterruptedException, NoSuchAlgorithmException {
+    String cardInstanceId = genCardId(message);
+
+    boolean supportForward = (boolean) options.getOrDefault("supportForward", true);
+    boolean atAll = (boolean) options.getOrDefault("alAll", false);
+    boolean atSender = (boolean) options.getOrDefault("atSender", false);
+    String callbackType = (String) options.getOrDefault("callbackType", "STREAM");
+    String[] recipients = (String[]) options.getOrDefault("recipients", null);
+
+    JSONObject restOptions = new JSONObject(options);
+    restOptions.remove("cardTemplateId");
+    restOptions.remove("cardData");
+    restOptions.remove("callbackType");
+    restOptions.remove("atSender");
+    restOptions.remove("atAll");
+    restOptions.remove("recipients");
+    restOptions.remove("supportForward");
+
+    // 构造创建并投放卡片的请求体
+    JSONObject data = new JSONObject();
+    data.put("cardTemplateId", cardTemplateId);
+    data.put("outTrackId", cardInstanceId);
+    data.put("callbackType", callbackType);
+
+    // 构造 cardData
+    JSONObject cardDataObject = new JSONObject();
+    cardDataObject.put("cardParamMap", cardData);
+    data.put("cardData", cardDataObject);
+
+    // 构造 Model
+    data.put("imGroupOpenSpaceModel", new JSONObject().fluentPut("supportForward", supportForward));
+    data.put("imRobotOpenSpaceModel", new JSONObject().fluentPut("supportForward", supportForward));
+
+    // 2：群聊, 1：单聊
+    String conversationType = message.getConversationType();
+    if (conversationType.equals("2")) {
+      data.put("openSpaceId", "dtv1.card//IM_GROUP." + message.getConversationId());
+      JSONObject imGroupOpenDeliverModel = new JSONObject();
+      imGroupOpenDeliverModel.put("robotCode", clientId);
+      if (atAll) {
+        imGroupOpenDeliverModel.put("atUserIds", new JSONObject().fluentPut("@ALL", "@ALL"));
+      } else if (atSender) {
+        imGroupOpenDeliverModel.put("atUserIds",
+            new JSONObject().fluentPut(message.getSenderStaffId(), message.getSenderNick()));
+      }
+      if (recipients != null) {
+        imGroupOpenDeliverModel.put("recipients", recipients);
+      }
+      data.put("imGroupOpenDeliverModel", new JSONObject().fluentPut("robotCode", clientId));
+    } else if (conversationType.equals("1")) {
+      data.put("openSpaceId", "dtv1.card//IM_ROBOT." + message.getSenderStaffId());
+      data.put("imRobotOpenDeliverModel", new JSONObject().fluentPut("spaceType", "IM_ROBOT"));
+    }
+
+    // 其余自定义参数
+    for (String key : restOptions.keySet()) {
+      data.put(key, restOptions.get(key));
+    }
+
+    String url = openApiHost + "/v1.0/card/instances/createAndDeliver";
+    HttpClient client = HttpClient.newHttpClient();
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .header("Content-Type", "application/json")
+        .header("Accept", "*/*")
+        .header("x-acs-dingtalk-access-token", accessTokenService.getAccessToken())
+        .POST(HttpRequest.BodyPublishers.ofString(data.toJSONString()))
+        .build();
+    try {
+      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+      log.info("reply card: " + data.toJSONString());
+      if (response.statusCode() != 200) {
+        log.error("reply card failed: " + response.statusCode() + " " + response.body());
+      }
+    } catch (IOException | InterruptedException e) {
+      e.printStackTrace();
+    }
+    return cardInstanceId;
+  }
+
+  public void updateCard(String cardInstanceId, JSONObject cardData, JSONObject options)
+      throws IOException, InterruptedException, NoSuchAlgorithmException {
+    JSONObject data = new JSONObject().fluentPut("outTrackId", cardInstanceId);
+    // 构造 cardData
+    JSONObject cardDataObject = new JSONObject();
+    cardDataObject.put("cardParamMap", cardData);
+    data.put("cardData", cardDataObject);
+
+    for (String key : options.keySet()) {
+      data.put(key, options.get(key));
+    }
+
+    String url = openApiHost + "/v1.0/card/instances";
+
+    HttpClient client = HttpClient.newHttpClient();
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .header("Content-Type", "application/json")
+        .header("Accept", "*/*")
+        .header("x-acs-dingtalk-access-token", accessTokenService.getAccessToken())
+        .PUT(HttpRequest.BodyPublishers.ofString(data.toJSONString()))
+        .build();
+    try {
+      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+      log.info("update card: " + data.toJSONString());
+      if (response.statusCode() != 200) {
+        log.error("update card failed: " + response.statusCode() + " " + response.body());
+      }
+    } catch (IOException | InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Override
+  public Void execute(ChatbotMessage message) {
+
+    String receivedMessage = message.getText().getContent().trim();
+    log.info("received message: " + receivedMessage);
+
+    try {
+      // 创建并投放卡片
+      String cardTemplateId = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema";
+      JSONObject cardData = new JSONObject();
+      cardData.put("markdown", "# markdown");
+      cardData.put("submitted", false);
+      cardData.put("title", "钉钉互动卡片");
+      cardData.put("tag", "标签");
+      JSONObject options = new JSONObject();
+      String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
+          jsonObjectUtils.convertJSONValuesToString(cardData), options);
+
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+
+      // 更新卡片
+      JSONObject updateCardData = new JSONObject();
+      updateCardData.put("markdown", "# hello world");
+      JSONObject updateOptions = new JSONObject();
+      JSONObject cardUpdateOptions = new JSONObject();
+      cardUpdateOptions.put("updateCardDataByKey", true);
+      updateOptions.put("cardUpdateOptions", cardUpdateOptions);
+      updateCard(cardInstanceId, jsonObjectUtils.convertJSONValuesToString(updateCardData), updateOptions);
+
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+      Thread.currentThread().interrupt();
+    }
+
+    return null;
+  }
+}
