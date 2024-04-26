@@ -47,7 +47,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         self.logger.info(f"received message: {incoming_message}")
 
         # 卡片模板 ID
-        card_template_id = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"
+        card_template_id = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
         # 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
         card_data = {
             "markdown": "# markdown",

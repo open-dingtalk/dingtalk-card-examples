@@ -1,6 +1,15 @@
 package com.card.java;
 
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.dashscope.aigc.generation.Generation;
+import com.alibaba.dashscope.aigc.generation.GenerationParam;
+import com.alibaba.dashscope.aigc.generation.GenerationResult;
+import com.alibaba.dashscope.common.Message;
+import com.alibaba.dashscope.common.ResultCallback;
+import com.alibaba.dashscope.common.Role;
+import com.alibaba.dashscope.exception.ApiException;
+import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.dingtalk.open.app.api.callback.OpenDingTalkCallbackListener;
 import com.dingtalk.open.app.api.models.bot.ChatbotMessage;
 
@@ -21,6 +30,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
+import java.util.Collections;
+import java.util.concurrent.Semaphore;
 
 @Slf4j
 @Component
@@ -51,6 +62,90 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       hexString.append(hex);
     }
     return hexString.toString();
+  }
+
+  public void streamCallWithMessage(String message, String outTrackId, String contentKey)
+      throws ApiException, NoApiKeyException, InputRequiredException, InterruptedException {
+    Generation gen = new Generation();
+
+    Message userMsg = Message.builder()
+        .role(Role.USER.getValue())
+        .content(message)
+        .build();
+
+    GenerationParam param = GenerationParam.builder()
+        .model("qwen-turbo")
+        .messages(Collections.singletonList(userMsg))
+        .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+        .topP(0.8)
+        .incrementalOutput(true)
+        .build();
+
+    Semaphore semaphore = new Semaphore(0);
+    StringBuilder fullContent = new StringBuilder();
+    gen.streamCall(param, new ResultCallback<GenerationResult>() {
+      @Override
+      public void onEvent(GenerationResult message) {
+        fullContent.append(message.getOutput().getChoices().get(0).getMessage().getContent());
+        String content = fullContent.toString();
+        streaming(outTrackId, contentKey, content, true, false, false);
+      }
+
+      @Override
+      public void onError(Exception err) {
+        log.error("streamCallWithMessage get exception, msg: " + err.getMessage());
+        streaming(outTrackId, contentKey, fullContent.toString(), true, false, true);
+        semaphore.release();
+      }
+
+      @Override
+      public void onComplete() {
+        streaming(outTrackId, contentKey, fullContent.toString(), true, true, false);
+        semaphore.release();
+      }
+    });
+    semaphore.acquire();
+  }
+
+  public void streaming(
+      String cardInstanceId,
+      String contentKey,
+      String contentValue,
+      Boolean isFull,
+      Boolean isFinalize,
+      Boolean isError) {
+
+    JSONObject data = new JSONObject().fluentPut("outTrackId", cardInstanceId);
+    data.put("key", contentKey);
+    data.put("content", contentValue);
+    data.put("isFull", isFull);
+    data.put("isFinalize", isFinalize);
+    data.put("isError", isError);
+    data.put("guid", UUID.randomUUID().toString());
+
+    String url = openApiHost + "/v1.0/card/streaming";
+
+    OkHttpClient client = new OkHttpClient();
+    MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    RequestBody body = RequestBody.create(data.toJSONString(), JSON);
+
+    Request request = new Request.Builder()
+        .url(url)
+        .addHeader("Content-Type", "application/json")
+        .addHeader("Accept", "*/*")
+        .addHeader("x-acs-dingtalk-access-token", accessTokenService.getAccessToken())
+        .put(body)
+        .build();
+
+    try {
+      Response response = client.newCall(request).execute();
+      log.info("streaming update card: " + data.toJSONString());
+      if (response.code() != 200) {
+        log.error("streaming update card failed: " + response.code() + " " + response.body().string());
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   public String createAndDeliverCard(ChatbotMessage message, String cardTemplateId, JSONObject cardData,
@@ -140,43 +235,6 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
     return cardInstanceId;
   }
 
-  public void updateCard(String cardInstanceId, JSONObject cardData, JSONObject options)
-      throws IOException, InterruptedException, NoSuchAlgorithmException {
-    JSONObject data = new JSONObject().fluentPut("outTrackId", cardInstanceId);
-    // 构造 cardData
-    JSONObject cardDataObject = new JSONObject();
-    cardDataObject.put("cardParamMap", cardData);
-    data.put("cardData", cardDataObject);
-
-    for (String key : options.keySet()) {
-      data.put(key, options.get(key));
-    }
-
-    String url = openApiHost + "/v1.0/card/instances";
-
-    OkHttpClient client = new OkHttpClient();
-    MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    RequestBody body = RequestBody.create(data.toJSONString(), JSON);
-
-    Request request = new Request.Builder()
-        .url(url)
-        .addHeader("Content-Type", "application/json")
-        .addHeader("Accept", "*/*")
-        .addHeader("x-acs-dingtalk-access-token", accessTokenService.getAccessToken())
-        .put(body)
-        .build();
-
-    try {
-      Response response = client.newCall(request).execute();
-      log.info("update card: " + data.toJSONString());
-      if (response.code() != 200) {
-        log.error("update card failed: " + response.code() + " " + response.body().string());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
   @Override
   public Void execute(ChatbotMessage message) {
 
@@ -184,37 +242,16 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
     log.info("received message: " + receivedMessage);
 
     try {
-      // 创建并投放卡片
       // 卡片模板 ID
-      String cardTemplateId = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
-      // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
+      String cardTemplateId = "8aebdfb9-28f4-4a98-98f5-396c3dde41a0.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+      String contentKey = "content";
       JSONObject cardData = new JSONObject();
-      cardData.put("markdown", "# markdown");
-      cardData.put("submitted", false);
-      cardData.put("title", "钉钉互动卡片");
-      cardData.put("tag", "标签");
+      cardData.put(contentKey, "");
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);
-
-      try {
-        Thread.sleep(2000);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-
-      // 更新卡片
-      JSONObject updateCardData = new JSONObject();
-      updateCardData.put("markdown", "# hello world");
-      JSONObject updateOptions = new JSONObject();
-      JSONObject cardUpdateOptions = new JSONObject();
-      cardUpdateOptions.put("updateCardDataByKey", true);
-      updateOptions.put("cardUpdateOptions", cardUpdateOptions);
-      updateCard(cardInstanceId, jsonObjectUtils.convertJSONValuesToString(updateCardData), updateOptions);
-
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
+      streamCallWithMessage(receivedMessage, cardInstanceId, contentKey);
+    } catch (NoSuchAlgorithmException | IOException | ApiException | NoApiKeyException | InputRequiredException e) {
       e.printStackTrace();
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -222,5 +259,13 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
     }
 
     return null;
+  }
+
+  private static String repeat(String str, int times) {
+    StringBuilder repeated = new StringBuilder();
+    for (int i = 0; i < times; i++) {
+      repeated.append(str);
+    }
+    return repeated.toString();
   }
 }

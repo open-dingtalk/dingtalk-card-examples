@@ -149,7 +149,9 @@ func (c *DingTalkClient) UpdateCard(request *dingtalkcard_1_0.UpdateCardRequest)
 
 func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackDataModel) ([]byte, error) {
 	logger.GetLogger().Infof("received message: %v", data.Text.Content)
-	CARD_TEMPLATE_ID := "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"
+	// 卡片模板 ID
+	CARD_TEMPLATE_ID := "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema" // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+	// 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
 	cardData := &dingtalkcard_1_0.CreateAndDeliverRequestCardData{
 		CardParamMap: make(map[string]*string),
 	}
