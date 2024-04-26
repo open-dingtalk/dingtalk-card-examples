@@ -260,12 +260,4 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
 
     return null;
   }
-
-  private static String repeat(String str, int times) {
-    StringBuilder repeated = new StringBuilder();
-    for (int i = 0; i < times; i++) {
-      repeated.append(str);
-    }
-    return repeated.toString();
-  }
 }
