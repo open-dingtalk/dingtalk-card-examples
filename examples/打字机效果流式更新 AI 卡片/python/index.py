@@ -39,16 +39,21 @@ def call_with_stream(request_content: str, callback: Callable[[str], None]):
         incremental_output=True,  # get streaming output incrementally.
     )
     full_content = ""  # with incrementally we need to merge output.
+    length = 0
     for response in responses:
         if response.status_code == HTTPStatus.OK:
             full_content += response.output.choices[0]["message"]["content"]
-            callback(full_content)
+            full_content_length = len(full_content)
+            if full_content_length - length > 20:
+                callback(full_content)
+                logger.info(f"调用流式更新接口更新内容：current_length: {length}, next_length: {full_content_length}")
+                length = full_content_length
         else:
             raise Exception(
                 f"Request id: {response.request_id}, Status code: {response.status_code}, error code: {response.code}, error message: {response.message}"
             )
-
-    logger.info(f"Request Content: {request_content}, Full response:\n {full_content}")
+    callback(full_content)
+    logger.info(f"Request Content: {request_content}\nFull response: {full_content}\nFull response length: {len(full_content)}")
     return full_content
 
 

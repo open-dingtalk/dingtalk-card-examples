@@ -49,6 +49,10 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
   @Value("${dingtalk.app.client-id}")
   private String clientId;
 
+  private static class StreamState {
+    int contentLen = 0;
+  }
+
   public static String genCardId(ChatbotMessage message) throws NoSuchAlgorithmException {
     String factor = message.getSenderId() + '_' + message.getSenderCorpId() + '_' + message.getConversationId() + '_'
         + message.getMsgId() + '_' + UUID.randomUUID().toString();
@@ -83,12 +87,18 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
 
     Semaphore semaphore = new Semaphore(0);
     StringBuilder fullContent = new StringBuilder();
+    StreamState state = new StreamState();
     gen.streamCall(param, new ResultCallback<GenerationResult>() {
       @Override
       public void onEvent(GenerationResult message) {
         fullContent.append(message.getOutput().getChoices().get(0).getMessage().getContent());
         String content = fullContent.toString();
-        streaming(outTrackId, contentKey, content, true, false, false);
+        int fullContentLen = content.length();
+        if (fullContentLen - state.contentLen > 20) {
+          streaming(outTrackId, contentKey, content, true, false, false);
+          log.info("调用流式更新接口更新内容：current_length=" + state.contentLen + ", next_length=" + fullContentLen);
+          state.contentLen = fullContentLen;
+        }
       }
 
       @Override
