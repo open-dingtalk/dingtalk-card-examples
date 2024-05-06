@@ -101,7 +101,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
     console.log("update card: ", cardInstanceId, updateCardData);
   }, 2000);
 
-  return { status: EventAck.SUCCESS };
+  client.socketCallBackResponse(event.headers.messageId, EventAck.SUCCESS);
 };
 
 // 卡片回传请求回调
