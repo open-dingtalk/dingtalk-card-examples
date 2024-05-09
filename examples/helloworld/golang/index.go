@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
@@ -148,7 +149,9 @@ func (c *DingTalkClient) UpdateCard(request *dingtalkcard_1_0.UpdateCardRequest)
 }
 
 func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackDataModel) ([]byte, error) {
-	logger.GetLogger().Infof("received message: %v", data.Text.Content)
+	content := strings.TrimSpace(data.Text.Content)
+	logger.GetLogger().Infof("received message: %v", content)
+
 	// 卡片模板 ID
 	CARD_TEMPLATE_ID := "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema" // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
 	// 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
@@ -156,7 +159,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 		CardParamMap: make(map[string]*string),
 	}
 	cardData.CardParamMap["title"] = tea.String("钉钉互动卡片")
-	cardData.CardParamMap["markdown"] = tea.String("# markdown")
+	cardData.CardParamMap["markdown"] = tea.String(content)
 	cardData.CardParamMap["submitted"] = tea.String("false")
 	cardData.CardParamMap["tag"] = tea.String("标签")
 	imGroupOpenSpaceModel := &dingtalkcard_1_0.CreateAndDeliverRequestImGroupOpenSpaceModel{
@@ -210,7 +213,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 	updateCardData := &dingtalkcard_1_0.UpdateCardRequestCardData{
 		CardParamMap: make(map[string]*string),
 	}
-	updateCardData.CardParamMap["markdown"] = tea.String("# hello world")
+	updateCardData.CardParamMap["tag"] = tea.String("更新后的标签")
 	updateOptions := &dingtalkcard_1_0.UpdateCardRequestCardUpdateOptions{
 		UpdateCardDataByKey: tea.Bool(true),
 	}

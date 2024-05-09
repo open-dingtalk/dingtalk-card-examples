@@ -73,7 +73,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
   const cardTemplateId = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
   // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
   const cardData: Record<string, any> = {
-    markdown: "# markdown",
+    markdown: content,
     submitted: false,
     title: "钉钉互动卡片",
     tag: "标签",
@@ -90,7 +90,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
 
   // 更新卡片
   setTimeout(() => {
-    const updateCardData: Record<string, any> = { markdown: "# hello world" };
+    const updateCardData: Record<string, any> = { tag: "更新后的标签" };
     cardInstance.putCardData({
       cardInstanceId,
       cardData: convertJSONValuesToString(updateCardData),

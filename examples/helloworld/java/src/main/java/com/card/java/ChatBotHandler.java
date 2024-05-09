@@ -189,7 +189,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       String cardTemplateId = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
       // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
       JSONObject cardData = new JSONObject();
-      cardData.put("markdown", "# markdown");
+      cardData.put("markdown", receivedMessage);
       cardData.put("submitted", false);
       cardData.put("title", "钉钉互动卡片");
       cardData.put("tag", "标签");
@@ -205,7 +205,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
 
       // 更新卡片
       JSONObject updateCardData = new JSONObject();
-      updateCardData.put("markdown", "# hello world");
+      updateCardData.put("tag", "更新后的标签");
       JSONObject updateOptions = new JSONObject();
       JSONObject cardUpdateOptions = new JSONObject();
       cardUpdateOptions.put("updateCardDataByKey", true);
