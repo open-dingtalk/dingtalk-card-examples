@@ -34,6 +34,17 @@ console.error = (...args: any) => {
   originalError(`[${timestamp}]`, ...args);
 };
 
+function getCurrentDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 const client = new DWClient({
   clientId: options.clientId,
   clientSecret: options.clientSecret,
@@ -70,13 +81,11 @@ const onBotMessage = async (event: DWClientDownStream) => {
   console.log("received message: ", content);
 
   // 卡片模板 ID
-  const cardTemplateId = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+  const cardTemplateId = "d5e8fbd6-2d4f-4872-bca9-836a04c8e1af.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
   // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
   const cardData: Record<string, any> = {
-    markdown: content,
-    submitted: false,
-    title: "钉钉互动卡片",
-    tag: "标签",
+    title: content,
+    joined: false,
   };
 
   const cardInstance = new CardReplier(client, message);
@@ -85,54 +94,72 @@ const onBotMessage = async (event: DWClientDownStream) => {
     cardTemplateId,
     cardData: convertJSONValuesToString(cardData),
   });
-
   console.log("reply card: ", cardInstanceId, cardData);
-
-  // 更新卡片
-  setTimeout(() => {
-    const updateCardData: Record<string, any> = { tag: "更新后的标签" };
-    cardInstance.putCardData({
-      cardInstanceId,
-      cardData: convertJSONValuesToString(updateCardData),
-      cardUpdateOptions: {
-        updateCardDataByKey: true,
-      },
-    });
-    console.log("update card: ", cardInstanceId, updateCardData);
-  }, 2000);
 
   client.socketCallBackResponse(event.headers.messageId, EventAck.SUCCESS);
 };
 
+const contentById: Record<string, any[]> = {};
+
 // 卡片回传请求回调
 const onCardCallback = async (event: DWClientDownStream) => {
   const message = JSON.parse(event.data);
+  const userId = message.userId;
   console.log("card callback message: ", message);
 
-  const userPrivateData: Record<string, any> = {};
+  const cardInstanceId = message.outTrackId;
+  const cardInstance = new CardReplier(client, message);
 
   const cardPrivateData = JSON.parse(message.content).cardPrivateData;
   const params = cardPrivateData.params;
-  const local_input = params.local_input;
-
-  if (local_input != null) {
-    userPrivateData.private_input = local_input;
-    userPrivateData.submitted = true;
+  const currentContent = contentById[cardInstanceId] || [];
+  const deleteUid = params.delete_uid;
+  const userPrivateData: Record<string, any> = { uid: userId };
+  let nextContent = [];
+  if (deleteUid) {
+    // 取消接龙
+    userPrivateData.joined = false;
+    nextContent = currentContent.filter((item: any) => item.uid !== deleteUid);
+  } else {
+    // 参与接龙
+    userPrivateData.joined = true;
+    const body: Record<string, any> = {
+      timestamp: getCurrentDateTime(),
+      uid: userId,
+      remark: params.remark,
+      nick: "",
+      avatar: "",
+    };
+    const userInfo = await cardInstance.getUserInfoByUserId(userId);
+    console.log(`get userInfo by userId ${userId}: ${userInfo}`);
+    if (userInfo) {
+      body.nick = userInfo.name || "";
+      body.avatar = userInfo.avatar || "";
+    }
+    currentContent.push(body);
+    nextContent = currentContent;
   }
+  contentById[cardInstanceId] = nextContent;
 
   const cardUpdateOptions = {
     updateCardDataByKey: true,
     updatePrivateDataByKey: true,
   };
-  const response = {
-    cardUpdateOptions,
-    userPrivateData: {
-      cardParamMap: convertJSONValuesToString(userPrivateData),
-    },
-  };
 
-  console.log("card callback response: ", response);
-  client.socketCallBackResponse(event.headers.messageId, response);
+  // 更新接龙列表和参与状态
+  const updateCardData = { content: nextContent };
+  cardInstance.putCardData({
+    cardInstanceId,
+    cardData: convertJSONValuesToString(updateCardData),
+    privateData: {
+      [userId]: {
+        cardParamMap: convertJSONValuesToString(userPrivateData),
+      },
+    },
+    cardUpdateOptions,
+  });
+  console.log("update data: ", cardInstanceId, updateCardData, userPrivateData);
+  client.socketCallBackResponse(event.headers.messageId, {});
 };
 
 client

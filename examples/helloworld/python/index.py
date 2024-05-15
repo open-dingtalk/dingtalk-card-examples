@@ -26,7 +26,7 @@ def define_options():
     return options
 
 
-def convertJSONValuesToString(obj: dict) -> str:
+def convert_json_values_to_string(obj: dict) -> str:
     result = {}
     for key, value in obj.items():
         if isinstance(value, str):
@@ -63,7 +63,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         # 创建并投放卡片
         card_instance_id = card_instance.create_and_deliver_card(
             card_template_id,
-            convertJSONValuesToString(card_data),
+            convert_json_values_to_string(card_data),
         )
 
         self.logger.info(f"reply card: {card_instance_id} {card_data}")
@@ -73,7 +73,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         update_card_data = {"tag": "更新后的标签"}
         card_instance.put_card_data(
             card_instance_id,
-            convertJSONValuesToString(update_card_data),
+            convert_json_values_to_string(update_card_data),
             cardUpdateOptions={"updateCardDataByKey": True},
         )
         self.logger.info(f"update card: {card_instance_id} {update_card_data}")
@@ -109,7 +109,7 @@ class CardCallbackHandler(dingtalk_stream.CallbackHandler):
         response = {
             "cardUpdateOptions": cardUpdateOptions,
             "userPrivateData": {
-                "cardParamMap": convertJSONValuesToString(user_private_data),
+                "cardParamMap": convert_json_values_to_string(user_private_data),
             },
         }
 

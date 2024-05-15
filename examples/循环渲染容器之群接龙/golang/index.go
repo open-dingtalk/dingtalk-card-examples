@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -31,7 +34,8 @@ type DingTalkClient struct {
 }
 
 var (
-	dingtalkClient *DingTalkClient = nil
+	dingtalkClient *DingTalkClient          = nil
+	contentById    map[string][]interface{} = make(map[string][]interface{})
 )
 
 func NewDingTalkClient(clientId, clientSecret string) *DingTalkClient {
@@ -72,6 +76,57 @@ func (c *DingTalkClient) GetAccessToken() (string, error) {
 		return "", tryErr
 	}
 	return *response.Body.AccessToken, nil
+}
+
+func (c *DingTalkClient) GetUserInfoByUserId(userid string) (interface{}, error) {
+	accessToken, err := c.GetAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	data, _ := json.Marshal(map[string]string{"userid": userid})
+	url := "https://oapi.dingtalk.com/topapi/v2/user/get"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		logger.GetLogger().Errorf("NewRequest Error: ", err)
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	q := req.URL.Query()
+	q.Add("access_token", accessToken)
+	req.URL.RawQuery = q.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.GetLogger().Errorf("Http request Error: ", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.GetLogger().Errorf("Read body Error: ", err)
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		logger.GetLogger().Errorf("Unmarshal Error: ", err)
+		return nil, err
+	}
+
+	if errcode, ok := result["errcode"].(float64); ok && errcode == 0 {
+		return result["result"], nil
+	}
+
+	errmsg, ok := result["errmsg"].(string)
+	if !ok {
+		errmsg = "unknown error"
+	}
+	logger.GetLogger().Errorf("Get user info by userid failed, errcode: %v, errmsg: %s\n", result["errcode"], errmsg)
+	return nil, fmt.Errorf("get user info by userid failed, errcode: %v, errmsg: %s", result["errcode"], errmsg)
 }
 
 func (c *DingTalkClient) SendCard(request *dingtalkcard_1_0.CreateAndDeliverRequest) (*dingtalkcard_1_0.CreateAndDeliverResponse, error) {
@@ -153,15 +208,13 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 	logger.GetLogger().Infof("received message: %v", content)
 
 	// 卡片模板 ID
-	CARD_TEMPLATE_ID := "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema" // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+	CARD_TEMPLATE_ID := "d5e8fbd6-2d4f-4872-bca9-836a04c8e1af.schema" // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
 	// 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
 	cardData := &dingtalkcard_1_0.CreateAndDeliverRequestCardData{
 		CardParamMap: make(map[string]*string),
 	}
-	cardData.CardParamMap["title"] = tea.String("钉钉互动卡片")
-	cardData.CardParamMap["markdown"] = tea.String(content)
-	cardData.CardParamMap["submitted"] = tea.String("false")
-	cardData.CardParamMap["tag"] = tea.String("标签")
+	cardData.CardParamMap["title"] = tea.String(content)
+	cardData.CardParamMap["joined"] = tea.String("false")
 	imGroupOpenSpaceModel := &dingtalkcard_1_0.CreateAndDeliverRequestImGroupOpenSpaceModel{
 		SupportForward: tea.Bool(true),
 	}
@@ -202,62 +255,100 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 	// 创建并投放卡片
 	sendCardResponse, err := dingtalkClient.SendCard(sendCardRequest)
 	if err != nil {
-		logger.GetLogger().Errorf("reply card failed: %+v", sendCardResponse)
+		logger.GetLogger().Infof("reply card failed: %+v", sendCardResponse)
 		return nil, err
 	}
 	logger.GetLogger().Infof("reply card: %v %+v", outTrackId, sendCardRequest.CardData)
-
-	time.Sleep(2 * time.Second)
-
-	updateCardData := &dingtalkcard_1_0.UpdateCardRequestCardData{
-		CardParamMap: make(map[string]*string),
-	}
-	updateCardData.CardParamMap["tag"] = tea.String("更新后的标签")
-	updateOptions := &dingtalkcard_1_0.UpdateCardRequestCardUpdateOptions{
-		UpdateCardDataByKey: tea.Bool(true),
-	}
-	updateCardRequest := &dingtalkcard_1_0.UpdateCardRequest{
-		OutTrackId:        tea.String(outTrackId),
-		CardData:          updateCardData,
-		CardUpdateOptions: updateOptions,
-	}
-	// 更新卡片
-	updateCardResponse, err := dingtalkClient.UpdateCard(updateCardRequest)
-	if err != nil {
-		logger.GetLogger().Errorf("update card failed: %+v", updateCardResponse)
-		return nil, err
-	}
-	logger.GetLogger().Infof("update card: %v %+v", outTrackId, updateCardRequest.CardData)
 
 	return []byte(""), nil
 }
 
 func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardResponse, error) {
+	userId := request.UserId
 	logger.GetLogger().Infof("card callback message: %v", request)
 
-	userPrivateData := make(map[string]string)
+	cardInstanceId := request.OutTrackId
+	userPrivateData := make(map[string]*string)
+	userPrivateData["uid"] = tea.String(userId)
+
+	currentContent, exists := contentById[cardInstanceId]
+	if !exists {
+		currentContent = []interface{}{}
+	}
+	nextContent := make([]interface{}, 0)
 
 	params := request.CardActionData.CardPrivateData.Params
-	if localInput, ok := params["local_input"]; ok && localInput != nil {
-		userPrivateData["priavte_input"] = localInput.(string)
-		userPrivateData["submitted"] = "true"
+	deleteUid, exists := params["delete_uid"]
+	if !exists {
+		deleteUid = ""
 	}
 
-	response := &card.CardResponse{
-		CardUpdateOptions: &card.CardUpdateOptions{
-			UpdateCardDataByKey:    true,
-			UpdatePrivateDataByKey: true,
-		},
-		UserPrivateData: &card.CardDataDto{
+	if deleteUid != "" {
+		// 取消接龙
+		userPrivateData["joined"] = tea.String("false")
+		for _, item := range currentContent {
+			if item.(map[string]interface{})["uid"] == deleteUid {
+				continue
+			}
+			nextContent = append(nextContent, item)
+		}
+	} else {
+		// 参与接龙
+		userPrivateData["joined"] = tea.String("true")
+		body := map[string]interface{}{
+			"timestamp": time.Now().Format("2006-01-02 15:04:05"),
+			"uid":       userId,
+			"remark":    params["remark"],
+			"nick":      "",
+			"avatar":    "",
+		}
+		userInfo, err := dingtalkClient.GetUserInfoByUserId(userId)
+		if err == nil {
+			logger.GetLogger().Infof("get user info: %+v", userInfo)
+			userInfoMap, ok := userInfo.(map[string]interface{})
+			if ok {
+				if name, ok := userInfoMap["name"].(string); ok {
+					body["nick"] = name
+				}
+				if avatar, ok := userInfoMap["avatar"].(string); ok {
+					body["avatar"] = avatar
+				}
+			}
+		}
+		nextContent = append(currentContent, body)
+	}
+	contentById[cardInstanceId] = nextContent
+	nextContentJSON, _ := json.Marshal(nextContent)
+	nextContentStr := string(nextContentJSON)
+
+	// 更新接龙列表和参与状态
+	updateCardData := &dingtalkcard_1_0.UpdateCardRequestCardData{
+		CardParamMap: make(map[string]*string),
+	}
+	updateCardData.CardParamMap["content"] = tea.String(nextContentStr)
+	updatePrivateData := map[string]*dingtalkcard_1_0.PrivateDataValue{
+		userId: {
 			CardParamMap: userPrivateData,
 		},
 	}
-
-	responseJSON, err := json.MarshalIndent(response, "", "    ") // 使用 MarshalIndent 来美化输出
-	if err == nil {
-		logger.GetLogger().Infof("card callback response: \n%s", string(responseJSON))
+	updateOptions := &dingtalkcard_1_0.UpdateCardRequestCardUpdateOptions{
+		UpdateCardDataByKey:    tea.Bool(true),
+		UpdatePrivateDataByKey: tea.Bool(true),
 	}
-	return response, nil
+	updateCardRequest := &dingtalkcard_1_0.UpdateCardRequest{
+		OutTrackId:        tea.String(cardInstanceId),
+		CardData:          updateCardData,
+		PrivateData:       updatePrivateData,
+		CardUpdateOptions: updateOptions,
+	}
+	updateCardResponse, err := dingtalkClient.UpdateCard(updateCardRequest)
+	if err != nil {
+		logger.GetLogger().Errorf("update card failed: %+v", updateCardResponse)
+	} else {
+		logger.GetLogger().Infof("update card: %v %+v %+v", cardInstanceId, updateCardRequest.CardData, updateCardRequest.PrivateData)
+	}
+
+	return nil, nil
 }
 
 func main() {

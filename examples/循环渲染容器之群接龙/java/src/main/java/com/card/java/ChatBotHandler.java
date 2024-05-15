@@ -185,34 +185,16 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
 
     try {
       // 卡片模板 ID
-      String cardTemplateId = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+      String cardTemplateId = "d5e8fbd6-2d4f-4872-bca9-836a04c8e1af.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
       // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
       JSONObject cardData = new JSONObject();
-      cardData.put("markdown", receivedMessage);
-      cardData.put("submitted", false);
-      cardData.put("title", "钉钉互动卡片");
-      cardData.put("tag", "标签");
+      cardData.put("title", receivedMessage);
+      cardData.put("joined", false);
 
       // 创建并投放卡片
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);
-
-      try {
-        Thread.sleep(2000);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-
-      // 更新卡片
-      JSONObject updateCardData = new JSONObject();
-      updateCardData.put("tag", "更新后的标签");
-      JSONObject updateOptions = new JSONObject();
-      JSONObject cardUpdateOptions = new JSONObject();
-      cardUpdateOptions.put("updateCardDataByKey", true);
-      updateOptions.put("cardUpdateOptions", cardUpdateOptions);
-      updateCard(cardInstanceId, jsonObjectUtils.convertJSONValuesToString(updateCardData), updateOptions);
-
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
     } catch (IOException e) {

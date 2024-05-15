@@ -257,9 +257,12 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       String contentKey = "content";
       JSONObject cardData = new JSONObject();
       cardData.put(contentKey, "");
+
+      // 创建并投放卡片
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);
+
       streamCallWithMessage(receivedMessage, cardInstanceId, contentKey);
     } catch (NoSuchAlgorithmException | IOException | ApiException | NoApiKeyException | InputRequiredException e) {
       e.printStackTrace();
