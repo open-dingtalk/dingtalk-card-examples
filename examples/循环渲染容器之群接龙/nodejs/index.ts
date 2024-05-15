@@ -81,7 +81,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
   console.log("received message: ", content);
 
   // 卡片模板 ID
-  const cardTemplateId = "d5e8fbd6-2d4f-4872-bca9-836a04c8e1af.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+  const cardTemplateId = "3d667b86-d30b-43ef-be8c-7fca37965210.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
   // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
   const cardData: Record<string, any> = {
     title: content,
