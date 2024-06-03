@@ -60,13 +60,16 @@ public class CardCallbackHandler implements OpenDingTalkCallbackListener<String,
       String responseStr = response.body().string();
       JSONObject responseJson = JSON.parseObject(responseStr);
       log.info("get userinfo by userid: " + responseStr);
-      if (responseJson != null && responseJson.getInteger("errcode") == 0) {
-        return responseJson.getJSONObject("result");
-      } else {
-        log.error("get userinfo by userid failed: " + responseJson.getString("errcode") + " "
-            + responseJson.getString("errmsg"));
-        return null;
+      if (responseJson != null) {
+        if (responseJson.getInteger("errcode") == 0) {
+          return responseJson.getJSONObject("result");
+        } else {
+          log.error("get userinfo by userid failed: " + responseJson.getString("errcode") + " "
+              + responseJson.getString("errmsg"));
+          return null;
+        }
       }
+      return null;
     } catch (IOException e) {
       e.printStackTrace();
       throw e;

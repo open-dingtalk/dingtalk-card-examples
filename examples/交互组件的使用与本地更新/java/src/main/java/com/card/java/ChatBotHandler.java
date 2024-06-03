@@ -1,6 +1,7 @@
 package com.card.java;
 
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSONArray;
 import com.dingtalk.open.app.api.callback.OpenDingTalkCallbackListener;
 import com.dingtalk.open.app.api.models.bot.ChatbotMessage;
 
@@ -140,41 +141,11 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
     return cardInstanceId;
   }
 
-  public void updateCard(String cardInstanceId, JSONObject cardData, JSONObject options)
-      throws IOException, InterruptedException, NoSuchAlgorithmException {
-    JSONObject data = new JSONObject().fluentPut("outTrackId", cardInstanceId);
-    // 构造 cardData
-    JSONObject cardDataObject = new JSONObject();
-    cardDataObject.put("cardParamMap", cardData);
-    data.put("cardData", cardDataObject);
-
-    for (String key : options.keySet()) {
-      data.put(key, options.get(key));
-    }
-
-    String url = openApiHost + "/v1.0/card/instances";
-
-    OkHttpClient client = new OkHttpClient();
-    MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    RequestBody body = RequestBody.create(data.toJSONString(), JSON);
-
-    Request request = new Request.Builder()
-        .url(url)
-        .addHeader("Content-Type", "application/json")
-        .addHeader("Accept", "*/*")
-        .addHeader("x-acs-dingtalk-access-token", accessTokenService.getAccessToken())
-        .put(body)
-        .build();
-
-    try {
-      Response response = client.newCall(request).execute();
-      log.info("update card: " + data.toJSONString());
-      if (response.code() != 200) {
-        log.error("update card failed: " + response.code() + " " + response.body().string());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+  private static JSONObject createCheckboxItem(int value, String text) {
+    JSONObject item = new JSONObject();
+    item.put("value", value);
+    item.put("text", text);
+    return item;
   }
 
   @Override
@@ -185,15 +156,44 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
 
     try {
       // 卡片模板 ID
-      String cardTemplateId = "3d667b86-d30b-43ef-be8c-7fca37965210.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+      String cardTemplateId = "737cda86-7a7f-4d83-ba07-321e6933be12.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
       // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
       JSONObject cardData = new JSONObject();
-      cardData.put("title", receivedMessage);
-      cardData.put("joined", false);
+      cardData.put("lastMessage", "交互组件本地更新卡片");
+      cardData.put("submitBtnStatus", "normal");
+      cardData.put("submitBtnText", "提交");
+      cardData.put("input", "");
+      cardData.put("selectIndex", -1);
+      cardData.put("multiSelectIndexes", new JSONArray());
+      cardData.put("date", "");
+      cardData.put("datetime", "");
+      cardData.put("checkbox", false);
+
+      JSONArray singleCheckboxItems = new JSONArray();
+      singleCheckboxItems.add(createCheckboxItem(0, "单选复选框选项 1"));
+      singleCheckboxItems.add(createCheckboxItem(1, "单选复选框选项 2"));
+      singleCheckboxItems.add(createCheckboxItem(2, "单选复选框选项 3"));
+      singleCheckboxItems.add(createCheckboxItem(3, "单选复选框选项 4"));
+      cardData.put("singleCheckboxItems", singleCheckboxItems);
+
+      JSONArray multiCheckboxItems = new JSONArray();
+      multiCheckboxItems.add(createCheckboxItem(0, "多选复选框选项 1"));
+      multiCheckboxItems.add(createCheckboxItem(1, "多选复选框选项 2"));
+      multiCheckboxItems.add(createCheckboxItem(2, "多选复选框选项 3"));
+      multiCheckboxItems.add(createCheckboxItem(3, "多选复选框选项 4"));
+      cardData.put("multiCheckboxItems", multiCheckboxItems);
 
       // 创建并投放卡片
       JSONObject options = new JSONObject();
-      createAndDeliverCard(message, cardTemplateId, jsonObjectUtils.convertJSONValuesToString(cardData), options);
+      String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
+          jsonObjectUtils.convertJSONValuesToString(cardData), options);
+
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
     } catch (IOException e) {
