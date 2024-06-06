@@ -357,6 +357,9 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 }
 
 func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardResponse, error) {
+	/**
+	 * 卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
+	 */
 	logger.GetLogger().Infof("card callback message: %v", request)
 
 	params := request.CardActionData.CardPrivateData.Params

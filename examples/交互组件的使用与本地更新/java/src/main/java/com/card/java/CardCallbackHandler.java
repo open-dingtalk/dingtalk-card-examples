@@ -26,6 +26,9 @@ public class CardCallbackHandler implements OpenDingTalkCallbackListener<String,
 
   @Override
   public JSONObject execute(String messageString) {
+    /**
+     * 卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
+     */
     log.info("card callback message: " + messageString);
     JSONObject userPrivateData = new JSONObject();
 

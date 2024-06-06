@@ -108,6 +108,9 @@ class CardCallbackHandler(dingtalk_stream.CallbackHandler):
             return
 
     async def process(self, callback: dingtalk_stream.CallbackMessage):
+        """
+        卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
+        """
         incoming_message = dingtalk_stream.CardCallbackMessage.from_dict(callback.data)
         user_id = incoming_message.user_id
         self.logger.info(f"card callback message: {incoming_message.to_dict()}")

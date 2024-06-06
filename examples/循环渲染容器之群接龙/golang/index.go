@@ -264,6 +264,9 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 }
 
 func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardResponse, error) {
+	/**
+	 * 卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
+	 */
 	userId := request.UserId
 	logger.GetLogger().Infof("card callback message: %v", request)
 

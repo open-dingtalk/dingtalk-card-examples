@@ -103,6 +103,9 @@ const contentById: Record<string, any[]> = {};
 
 // 卡片回传请求回调
 const onCardCallback = async (event: DWClientDownStream) => {
+  /**
+   * 卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
+   */
   const message = JSON.parse(event.data);
   const userId = message.userId;
   console.log("card callback message: ", message);
