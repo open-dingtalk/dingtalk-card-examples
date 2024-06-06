@@ -129,6 +129,8 @@ public class CardCallbackHandler implements OpenDingTalkCallbackListener<String,
           } catch (NumberFormatException ignored) {
             //
           }
+        } else if (element instanceof Integer) {
+          multiCheckbox.add(element);
         }
       }
       if (multiCheckbox.size() > 0) {
