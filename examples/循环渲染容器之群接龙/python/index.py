@@ -36,7 +36,7 @@ def convert_json_values_to_string(obj: dict) -> str:
         if isinstance(value, str):
             result[key] = value
         else:
-            result[key] = json.dumps(value)
+            result[key] = json.dumps(value, ensure_ascii=False)
     return result
 
 

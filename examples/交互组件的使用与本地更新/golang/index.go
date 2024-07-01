@@ -229,7 +229,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 }
 
 func checkRequiredFields(params map[string]interface{}) (map[string]string, error) {
-	userData := make(UserPrivateData)
+	userPrivateData := make(UserPrivateData)
 	requiredFields := map[string]string{
 		"input":          "文本输入",
 		"select":         "下拉单选",
@@ -242,26 +242,26 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 
 	logger.GetLogger().Infof("input: %s", reflect.TypeOf((params["input"])))
 	if input, ok := params["input"].(string); ok && input != "" {
-		userData["input"] = input
+		userPrivateData["input"] = input
 		delete(requiredFields, "input")
 	}
 
 	logger.GetLogger().Infof("dateType: %s", reflect.TypeOf((params["date"])))
 	if date, ok := params["date"].(string); ok && date != "" {
-		userData["date"] = date
+		userPrivateData["date"] = date
 		delete(requiredFields, "date")
 	}
 
 	logger.GetLogger().Infof("datetimeType: %s", reflect.TypeOf((params["datetime"])))
 	if datetime, ok := params["datetime"].(string); ok && datetime != "" {
-		userData["datetime"] = datetime
+		userPrivateData["datetime"] = datetime
 		delete(requiredFields, "datetime")
 	}
 
 	logger.GetLogger().Infof("selectType: %s", reflect.TypeOf((params["select"])))
 	if sel, ok := params["select"].(map[string]interface{}); ok {
 		if index, exists := sel["index"]; exists {
-			userData["selectIndex"] = index
+			userPrivateData["selectIndex"] = index
 			delete(requiredFields, "select")
 		}
 	}
@@ -276,7 +276,7 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 				}
 			}
 			if len(multiSelectIndexes) > 0 {
-				userData["multiSelectIndexes"] = multiSelectIndexes
+				userPrivateData["multiSelectIndexes"] = multiSelectIndexes
 				delete(requiredFields, "multiSelect")
 			}
 		}
@@ -284,7 +284,7 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 
 	logger.GetLogger().Infof("checkboxType: %s", reflect.TypeOf((params["checkbox"])))
 	if checkbox, ok := params["checkbox"].(bool); ok {
-		userData["checkbox"] = checkbox
+		userPrivateData["checkbox"] = checkbox
 	}
 
 	logger.GetLogger().Infof("singleCheckboxType: %s", reflect.TypeOf((params["singleCheckbox"])))
@@ -304,7 +304,7 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 					updatedItems = append(updatedItems, item)
 				}
 			}
-			userData["singleCheckboxItems"] = updatedItems
+			userPrivateData["singleCheckboxItems"] = updatedItems
 			delete(requiredFields, "singleCheckbox")
 		}
 	}
@@ -337,7 +337,7 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 						updatedItems = append(updatedItems, item)
 					}
 				}
-				userData["multiCheckboxItems"] = updatedItems
+				userPrivateData["multiCheckboxItems"] = updatedItems
 				delete(requiredFields, "multiCheckbox")
 			}
 		}
@@ -351,9 +351,9 @@ func checkRequiredFields(params map[string]interface{}) (map[string]string, erro
 		return convertJsonValuesToString(UserPrivateData{"errMsg": errMsg}), fmt.Errorf(errMsg)
 	}
 
-	userData["submitBtnText"] = "已提交"
-	userData["submitBtnStatus"] = "disabled"
-	return convertJsonValuesToString(userData), nil
+	userPrivateData["submitBtnText"] = "已提交"
+	userPrivateData["submitBtnStatus"] = "disabled"
+	return convertJsonValuesToString(userPrivateData), nil
 }
 
 func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardResponse, error) {

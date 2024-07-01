@@ -1,0 +1,336 @@
+package com.card.java;
+
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSONArray;
+import com.dingtalk.open.app.api.callback.OpenDingTalkCallbackListener;
+import com.dingtalk.open.app.api.models.bot.ChatbotMessage;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import lombok.extern.slf4j.Slf4j;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@Slf4j
+@Component
+public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessage, Void> {
+
+  @Autowired
+  private AccessTokenService accessTokenService;
+
+  @Autowired
+  private JSONObjectUtils jsonObjectUtils;
+
+  @Value("${openApiHost}")
+  private String openApiHost;
+
+  @Value("${dingtalk.app.client-id}")
+  private String clientId;
+
+  public static Map<String, JSONArray> formFieldsByInstanceId = new HashMap<>();
+
+  public static String genCardId(ChatbotMessage message) throws NoSuchAlgorithmException {
+    String factor = message.getSenderId() + '_' + message.getSenderCorpId() + '_' + message.getConversationId() + '_'
+        + message.getMsgId() + '_' + UUID.randomUUID().toString();
+    MessageDigest digest = MessageDigest.getInstance("SHA-256");
+    byte[] hash = digest.digest(factor.getBytes(StandardCharsets.UTF_8));
+    StringBuilder hexString = new StringBuilder();
+    for (byte b : hash) {
+      String hex = Integer.toHexString(0xff & b);
+      if (hex.length() == 1)
+        hexString.append('0');
+      hexString.append(hex);
+    }
+    return hexString.toString();
+  }
+
+  public String createAndDeliverCard(ChatbotMessage message, String cardTemplateId, JSONObject cardData,
+      JSONObject options)
+      throws IOException, InterruptedException, NoSuchAlgorithmException {
+    String cardInstanceId = genCardId(message);
+
+    boolean supportForward = (boolean) options.getOrDefault("supportForward", true);
+    boolean atAll = (boolean) options.getOrDefault("alAll", false);
+    boolean atSender = (boolean) options.getOrDefault("atSender", false);
+    String callbackType = (String) options.getOrDefault("callbackType", "STREAM");
+    String[] recipients = (String[]) options.getOrDefault("recipients", null);
+
+    JSONObject restOptions = new JSONObject(options);
+    restOptions.remove("cardTemplateId");
+    restOptions.remove("cardData");
+    restOptions.remove("callbackType");
+    restOptions.remove("atSender");
+    restOptions.remove("atAll");
+    restOptions.remove("recipients");
+    restOptions.remove("supportForward");
+
+    // 构造创建并投放卡片的请求体
+    JSONObject data = new JSONObject();
+    data.put("cardTemplateId", cardTemplateId);
+    data.put("outTrackId", cardInstanceId);
+    data.put("callbackType", callbackType);
+
+    // 构造 cardData
+    JSONObject cardDataObject = new JSONObject();
+    cardDataObject.put("cardParamMap", cardData);
+    data.put("cardData", cardDataObject);
+
+    // 构造 Model
+    data.put("imGroupOpenSpaceModel", new JSONObject().fluentPut("supportForward", supportForward));
+    data.put("imRobotOpenSpaceModel", new JSONObject().fluentPut("supportForward", supportForward));
+
+    // 2：群聊, 1：单聊
+    String conversationType = message.getConversationType();
+    if (conversationType.equals("2")) {
+      data.put("openSpaceId", "dtv1.card//IM_GROUP." + message.getConversationId());
+      JSONObject imGroupOpenDeliverModel = new JSONObject();
+      imGroupOpenDeliverModel.put("robotCode", clientId);
+      if (atAll) {
+        imGroupOpenDeliverModel.put("atUserIds", new JSONObject().fluentPut("@ALL", "@ALL"));
+      } else if (atSender) {
+        imGroupOpenDeliverModel.put("atUserIds",
+            new JSONObject().fluentPut(message.getSenderStaffId(), message.getSenderNick()));
+      }
+      if (recipients != null) {
+        imGroupOpenDeliverModel.put("recipients", recipients);
+      }
+      data.put("imGroupOpenDeliverModel", new JSONObject().fluentPut("robotCode", clientId));
+    } else if (conversationType.equals("1")) {
+      data.put("openSpaceId", "dtv1.card//IM_ROBOT." + message.getSenderStaffId());
+      data.put("imRobotOpenDeliverModel", new JSONObject().fluentPut("spaceType", "IM_ROBOT"));
+    }
+
+    // 其余自定义参数
+    for (String key : restOptions.keySet()) {
+      data.put(key, restOptions.get(key));
+    }
+
+    String url = openApiHost + "/v1.0/card/instances/createAndDeliver";
+
+    OkHttpClient client = new OkHttpClient();
+    MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    RequestBody body = RequestBody.create(data.toJSONString(), JSON);
+
+    Request request = new Request.Builder()
+        .url(url)
+        .addHeader("Content-Type", "application/json")
+        .addHeader("Accept", "*/*")
+        .addHeader("x-acs-dingtalk-access-token", accessTokenService.getAccessToken())
+        .post(body)
+        .build();
+
+    try {
+      Response response = client.newCall(request).execute();
+      log.info("reply card: " + data.toJSONString());
+      if (response.code() != 200) {
+        log.error("reply card failed: " + response.code() + " " + response.body().string());
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return cardInstanceId;
+  }
+
+  @Override
+  public Void execute(ChatbotMessage message) {
+
+    String receivedMessage = message.getText().getContent().trim();
+    log.info("received message: " + receivedMessage);
+
+    try {
+      // 卡片模板 ID
+      String cardTemplateId = "9f86e003-e65e-4680-bf4b-8df5958d9f17.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+      // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
+      JSONObject cardData = new JSONObject();
+      cardData.put("title", receivedMessage);
+      cardData.put("form_status", "normal");
+      cardData.put("button_text", "提交");
+      cardData.put("err_msg", "");
+
+      JSONArray formFields = new JSONArray();
+
+      JSONObject field1 = new JSONObject();
+      field1.put("type", "TEXT");
+      field1.put("required", true);
+      field1.put("name", "text_required");
+      field1.put("label", "必填文本输入");
+      field1.put("placeholder", "请输入文本");
+      field1.put("default_string", "");
+      formFields.add(field1);
+
+      JSONObject field2 = new JSONObject();
+      field2.put("type", "TEXT");
+      field2.put("name", "text");
+      field2.put("label", "文本输入");
+      field2.put("placeholder", "请输入文本");
+      field2.put("default_string", "");
+      formFields.add(field2);
+
+      JSONObject field3 = new JSONObject();
+      field3.put("type", "DATE");
+      field3.put("required", true);
+      field3.put("name", "date_required");
+      field3.put("label", "必填日期选择");
+      field3.put("placeholder", "请选择日期");
+      formFields.add(field3);
+
+      JSONObject field4 = new JSONObject();
+      field4.put("type", "DATE");
+      field4.put("name", "date");
+      field4.put("label", "日期选择");
+      field4.put("placeholder", "请选择日期");
+      field4.put("default_string", "2024-06-06");
+      formFields.add(field4);
+
+      JSONObject field5 = new JSONObject();
+      field5.put("type", "DATETIME");
+      field5.put("required", true);
+      field5.put("name", "datetime_required");
+      field5.put("label", "必填日期时间选择");
+      field5.put("placeholder", "请选择日期时间");
+      formFields.add(field5);
+
+      JSONObject field6 = new JSONObject();
+      field6.put("type", "DATETIME");
+      field6.put("name", "datetime");
+      field6.put("label", "日期时间选择");
+      field6.put("placeholder", "请选择日期时间");
+      field6.put("default_string", "2024-06-06 12:00");
+      formFields.add(field6);
+
+      JSONObject field7 = new JSONObject();
+      field7.put("type", "SELECT");
+      field7.put("required", true);
+      field7.put("name", "select_required");
+      field7.put("label", "必填单选下拉框");
+      field7.put("placeholder", "单选请选择");
+      JSONArray options7 = new JSONArray();
+      options7
+          .add(new JSONObject().fluentPut("value", 1).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 1")));
+      options7
+          .add(new JSONObject().fluentPut("value", 2).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 2")));
+      options7
+          .add(new JSONObject().fluentPut("value", 3).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 3")));
+      options7
+          .add(new JSONObject().fluentPut("value", 4).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 4")));
+      field7.put("options", options7);
+      formFields.add(field7);
+
+      JSONObject field8 = new JSONObject();
+      field8.put("type", "SELECT");
+      field8.put("name", "select");
+      field8.put("label", "单选下拉框");
+      field8.put("placeholder", "单选请选择");
+      field8.put("default_number", 1);
+      JSONArray options8 = new JSONArray();
+      options8
+          .add(new JSONObject().fluentPut("value", 1).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 1")));
+      options8
+          .add(new JSONObject().fluentPut("value", 2).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 2")));
+      options8
+          .add(new JSONObject().fluentPut("value", 3).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 3")));
+      options8
+          .add(new JSONObject().fluentPut("value", 4).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 4")));
+      field8.put("options", options8);
+      formFields.add(field8);
+
+      JSONObject field9 = new JSONObject();
+      field9.put("type", "MULTI_SELECT");
+      field9.put("required", true);
+      field9.put("name", "multi_select");
+      field9.put("label", "必填多选下拉框");
+      field9.put("placeholder", "多选请选择");
+      field9.put("default_number_array", new int[] { 0, 2 });
+      JSONArray options9 = new JSONArray();
+      options9
+          .add(new JSONObject().fluentPut("value", 1).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 1")));
+      options9
+          .add(new JSONObject().fluentPut("value", 2).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 2")));
+      options9
+          .add(new JSONObject().fluentPut("value", 3).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 3")));
+      options9
+          .add(new JSONObject().fluentPut("value", 4).fluentPut("text", new JSONObject().fluentPut("zh_CN", "选项 4")));
+      field9.put("options", options9);
+      formFields.add(field9);
+
+      JSONObject field10 = new JSONObject();
+      field10.put("type", "CHECKBOX_LIST");
+      field10.put("required", true);
+      field10.put("name", "checkbox_list");
+      field10.put("label", "必填单选列表");
+      JSONArray checkboxItems10 = new JSONArray();
+      checkboxItems10.add(new JSONObject().fluentPut("value", 0).fluentPut("text", "选项 0").fluentPut("checked", false)
+          .fluentPut("name", "checkbox_list").fluentPut("type", "CHECKBOX_LIST"));
+      checkboxItems10.add(new JSONObject().fluentPut("value", 1).fluentPut("text", "选项 1").fluentPut("checked", false)
+          .fluentPut("name", "checkbox_list").fluentPut("type", "CHECKBOX_LIST"));
+      checkboxItems10.add(new JSONObject().fluentPut("value", 2).fluentPut("text", "选项 2").fluentPut("checked", false)
+          .fluentPut("name", "checkbox_list").fluentPut("type", "CHECKBOX_LIST"));
+      checkboxItems10.add(new JSONObject().fluentPut("value", 3).fluentPut("text", "选项 3").fluentPut("checked", false)
+          .fluentPut("name", "checkbox_list").fluentPut("type", "CHECKBOX_LIST"));
+      field10.put("checkbox_items", checkboxItems10);
+      formFields.add(field10);
+
+      JSONObject field11 = new JSONObject();
+      field11.put("type", "CHECKBOX_LIST_MULTI");
+      field11.put("required", true);
+      field11.put("name", "checkbox_list_multi");
+      field11.put("label", "必填多选列表");
+      JSONArray checkboxItems11 = new JSONArray();
+      checkboxItems11.add(new JSONObject().fluentPut("value", 0).fluentPut("text", "选项 0").fluentPut("checked", false)
+          .fluentPut("name", "checkbox_list_multi").fluentPut("type", "CHECKBOX_LIST_MULTI"));
+      checkboxItems11.add(new JSONObject().fluentPut("value", 1).fluentPut("text", "选项 1").fluentPut("checked", true)
+          .fluentPut("name", "checkbox_list_multi").fluentPut("type", "CHECKBOX_LIST_MULTI"));
+      checkboxItems11.add(new JSONObject().fluentPut("value", 2).fluentPut("text", "选项 2").fluentPut("checked", false)
+          .fluentPut("name", "checkbox_list_multi").fluentPut("type", "CHECKBOX_LIST_MULTI"));
+      checkboxItems11.add(new JSONObject().fluentPut("value", 3).fluentPut("text", "选项 3").fluentPut("checked", true)
+          .fluentPut("name", "checkbox_list_multi").fluentPut("type", "CHECKBOX_LIST_MULTI"));
+      field11.put("checkbox_items", checkboxItems11);
+      formFields.add(field11);
+
+      JSONObject field12 = new JSONObject();
+      field12.put("type", "CHECKBOX");
+      field12.put("name", "checkbox");
+      field12.put("label", "复选框");
+      formFields.add(field12);
+
+      JSONObject field13 = new JSONObject();
+      field13.put("type", "CHECKBOX");
+      field13.put("name", "checkbox_default_true");
+      field13.put("label", "复选框默认勾选");
+      field13.put("default_boolean", true);
+      formFields.add(field13);
+
+      cardData.put("form_fields", formFields);
+
+      // 创建并投放卡片
+      JSONObject options = new JSONObject();
+      String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
+          jsonObjectUtils.convertJSONValuesToString(cardData), options);
+
+      formFieldsByInstanceId.put(cardInstanceId, formFields);
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+      Thread.currentThread().interrupt();
+    }
+
+    return null;
+  }
+}
