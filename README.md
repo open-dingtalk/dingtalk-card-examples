@@ -63,7 +63,7 @@ cd java
 mvn clean install
 ```
 
-在 ./src/main/resources/application.properties 中添加应用凭据的配置：
+在 `./src/main/resources/application.properties` 中添加应用凭据的配置：
 
 ```
 dingtalk.app.client-id=<client_id>
