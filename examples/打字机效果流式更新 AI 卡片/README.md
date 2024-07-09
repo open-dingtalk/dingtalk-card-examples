@@ -10,13 +10,15 @@ export DASHSCOPE_API_KEY=your-api-key  # Linux/Mac
 set DASHSCOPE_API_KEY=your-api-key  # Windows
 ```
 
-视频演示：[打字机效果流式更新 AI 卡片](https://wolai.dingtalk.com/nN92Sj5GipFt8yVmUxndog)
-
 这个卡片使用了下面这些元素：
 
 - 公有数据
 - Markdown 组件（流式组件）
 - 流式更新 Markdown 变量
+
+# 视频演示
+
+[打字机效果流式更新 AI 卡片](https://wolai.dingtalk.com/nN92Sj5GipFt8yVmUxndog)
 
 # 卡片模板
 
