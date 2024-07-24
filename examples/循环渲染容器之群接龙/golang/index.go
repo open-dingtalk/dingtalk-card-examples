@@ -263,6 +263,20 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 	return []byte(""), nil
 }
 
+func convertJsonValuesToString(obj map[string]interface{}) map[string]string {
+	result := make(map[string]string)
+	for key, value := range obj {
+		switch v := value.(type) {
+		case string:
+			result[key] = v
+		default:
+			encodedValue, _ := json.Marshal(value)
+			result[key] = string(encodedValue)
+		}
+	}
+	return result
+}
+
 func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardResponse, error) {
 	/**
 	 * 卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
@@ -271,8 +285,8 @@ func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardR
 	logger.GetLogger().Infof("card callback message: %v", request)
 
 	cardInstanceId := request.OutTrackId
-	userPrivateData := make(map[string]*string)
-	userPrivateData["uid"] = tea.String(userId)
+	userPrivateData := make(map[string]interface{})
+	userPrivateData["uid"] = userId
 
 	currentContent, exists := contentById[cardInstanceId]
 	if !exists {
@@ -288,7 +302,7 @@ func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardR
 
 	if deleteUid != "" {
 		// 取消接龙
-		userPrivateData["joined"] = tea.String("false")
+		userPrivateData["joined"] = false
 		for _, item := range currentContent {
 			if item.(map[string]interface{})["uid"] == deleteUid {
 				continue
@@ -297,7 +311,7 @@ func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardR
 		}
 	} else {
 		// 参与接龙
-		userPrivateData["joined"] = tea.String("true")
+		userPrivateData["joined"] = true
 		body := map[string]interface{}{
 			"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 			"uid":       userId,
@@ -321,37 +335,26 @@ func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardR
 		nextContent = append(currentContent, body)
 	}
 	contentById[cardInstanceId] = nextContent
-	nextContentJSON, _ := json.Marshal(nextContent)
-	nextContentStr := string(nextContentJSON)
 
 	// 更新接龙列表和参与状态
-	updateCardData := &dingtalkcard_1_0.UpdateCardRequestCardData{
-		CardParamMap: make(map[string]*string),
-	}
-	updateCardData.CardParamMap["content"] = tea.String(nextContentStr)
-	updatePrivateData := map[string]*dingtalkcard_1_0.PrivateDataValue{
-		userId: {
-			CardParamMap: userPrivateData,
+	updateCardData := make(map[string]interface{})
+	updateCardData["content"] = nextContent
+	response := &card.CardResponse{
+		CardUpdateOptions: &card.CardUpdateOptions{
+			UpdateCardDataByKey:    true,
+			UpdatePrivateDataByKey: true,
+		},
+		UserPrivateData: &card.CardDataDto{
+			CardParamMap: convertJsonValuesToString(userPrivateData),
+		},
+		CardData: &card.CardDataDto{
+			CardParamMap: convertJsonValuesToString(updateCardData),
 		},
 	}
-	updateOptions := &dingtalkcard_1_0.UpdateCardRequestCardUpdateOptions{
-		UpdateCardDataByKey:    tea.Bool(true),
-		UpdatePrivateDataByKey: tea.Bool(true),
-	}
-	updateCardRequest := &dingtalkcard_1_0.UpdateCardRequest{
-		OutTrackId:        tea.String(cardInstanceId),
-		CardData:          updateCardData,
-		PrivateData:       updatePrivateData,
-		CardUpdateOptions: updateOptions,
-	}
-	updateCardResponse, err := dingtalkClient.UpdateCard(updateCardRequest)
-	if err != nil {
-		logger.GetLogger().Errorf("update card failed: %+v", updateCardResponse)
-	} else {
-		logger.GetLogger().Infof("update card: %v %+v %+v", cardInstanceId, updateCardRequest.CardData, updateCardRequest.PrivateData)
-	}
 
-	return nil, nil
+	logger.GetLogger().Infof("update card: cardData.cardParamMap=%+v, userPrivateData.cardParamMap=%+v", updateCardData, userPrivateData)
+
+	return response, nil
 }
 
 func main() {

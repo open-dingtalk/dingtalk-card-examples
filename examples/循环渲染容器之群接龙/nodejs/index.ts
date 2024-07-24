@@ -151,18 +151,16 @@ const onCardCallback = async (event: DWClientDownStream) => {
 
   // 更新接龙列表和参与状态
   const updateCardData = { content: nextContent };
-  cardInstance.putCardData({
-    cardInstanceId,
-    cardData: convertJSONValuesToString(updateCardData),
-    privateData: {
-      [userId]: {
-        cardParamMap: convertJSONValuesToString(userPrivateData),
-      },
+  console.log(
+    `update data: cardData.cardParamMap=${updateCardData}, userPrivateData.cardParamMap=${userPrivateData}`
+  );
+  client.socketCallBackResponse(event.headers.messageId, {
+    cardData: { cardParamMap: convertJSONValuesToString(updateCardData) },
+    userPrivateData: {
+      cardParamMap: convertJSONValuesToString(userPrivateData),
     },
     cardUpdateOptions,
   });
-  console.log("update data: ", cardInstanceId, updateCardData, userPrivateData);
-  client.socketCallBackResponse(event.headers.messageId, {});
 };
 
 client

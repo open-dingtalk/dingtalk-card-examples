@@ -17,7 +17,6 @@ import okhttp3.Response;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.security.NoSuchAlgorithmException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import com.dingtalk.open.app.api.callback.OpenDingTalkCallbackListener;
@@ -33,9 +32,6 @@ public class CardCallbackHandler implements OpenDingTalkCallbackListener<String,
 
   @Autowired
   private AccessTokenService accessTokenService;
-
-  @Autowired
-  private ChatBotHandler chatbotHandler;
 
   private final JSONObject contentById = new JSONObject();
 
@@ -133,25 +129,23 @@ public class CardCallbackHandler implements OpenDingTalkCallbackListener<String,
       contentById.put(outTrackId, nextContent);
 
       // 更新接龙列表和参与状态
+      JSONObject updateCardData = new JSONObject();
+      updateCardData.put("content", nextContent);
+
       JSONObject cardUpdateOptions = new JSONObject();
       cardUpdateOptions.put("updateCardDataByKey", true);
       cardUpdateOptions.put("updatePrivateDataByKey", true);
 
-      JSONObject updateCardData = new JSONObject();
-      updateCardData.put("content", nextContent);
-      JSONObject updateOptions = new JSONObject();
-      updateOptions.put("cardUpdateOptions", cardUpdateOptions);
-      updateOptions.put("privateData", new JSONObject().fluentPut(userId,
-          new JSONObject().fluentPut("cardParamMap", jsonObjectUtils.convertJSONValuesToString(userPrivateData))));
+      JSONObject response = new JSONObject();
+      response.put("cardUpdateOptions", cardUpdateOptions);
+      response.put("cardData",
+          new JSONObject().fluentPut("cardParamMap", jsonObjectUtils.convertJSONValuesToString(updateCardData)));
+      response.put("userPrivateData",
+          new JSONObject().fluentPut("cardParamMap", jsonObjectUtils.convertJSONValuesToString(userPrivateData)));
 
-      chatbotHandler.updateCard(outTrackId, jsonObjectUtils.convertJSONValuesToString(updateCardData), updateOptions);
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
+      return response;
     } catch (IOException e) {
       e.printStackTrace();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-      Thread.currentThread().interrupt();
     }
     return null;
   }

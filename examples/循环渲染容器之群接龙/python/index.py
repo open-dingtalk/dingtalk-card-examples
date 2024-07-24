@@ -52,7 +52,7 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
 
         # 卡片模板 ID
         card_template_id = "3d667b86-d30b-43ef-be8c-7fca37965210.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
-        # 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data        
+        # 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
         card_data = {"title": incoming_message.text.content, "joined": False}
 
         card_instance = dingtalk_stream.CardReplier(
@@ -146,30 +146,26 @@ class CardCallbackHandler(dingtalk_stream.CallbackHandler):
             next_content = current_content
         content_by_id[card_instance_id] = next_content
 
-        cardUpdateOptions = {
-            "updateCardDataByKey": True,
-            "updatePrivateDataByKey": True,
-        }
-
         # 更新接龙列表和参与状态
         update_card_data = {"content": next_content}
-        card_instance = dingtalk_stream.CardReplier(
-            self.dingtalk_client, incoming_message
-        )
-        card_instance.put_card_data(
-            card_instance_id,
-            card_data=convert_json_values_to_string(update_card_data),
-            privateData={
-                user_id: {
-                    "cardParamMap": convert_json_values_to_string(user_private_data)
-                }
+        response = {
+            "cardUpdateOptions": {
+                "updateCardDataByKey": True,
+                "updatePrivateDataByKey": True,
             },
-            cardUpdateOptions=cardUpdateOptions,
-        )
+            "cardData": {
+                "cardParamMap": convert_json_values_to_string(update_card_data)
+            },
+            "userPrivateData": {
+                "cardParamMap": convert_json_values_to_string(user_private_data)
+            },
+        }
+
         self.logger.info(
-            f"update card: {card_instance_id} {update_card_data} {user_private_data}"
+            f"update card cardData.cardParamMap={update_card_data},  userPrivateData.cardParamMap={user_private_data}"
         )
-        return AckMessage.STATUS_OK, {}
+
+        return AckMessage.STATUS_OK, response
 
 
 def main():
