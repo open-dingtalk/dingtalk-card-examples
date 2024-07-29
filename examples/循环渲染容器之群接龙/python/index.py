@@ -30,7 +30,7 @@ def define_options():
     return options
 
 
-def convert_json_values_to_string(obj: dict) -> str:
+def convert_json_values_to_string(obj: dict) -> dict:
     result = {}
     for key, value in obj.items():
         if isinstance(value, str):
