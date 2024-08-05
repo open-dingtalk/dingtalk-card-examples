@@ -1,7 +1,7 @@
 import os
-import time
 import json
 import logging
+import asyncio
 import argparse
 from loguru import logger
 from random import random
@@ -61,13 +61,13 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
             self.dingtalk_client, incoming_message
         )
         # 先投放卡片
-        card_instance_id = card_instance.create_and_deliver_card(
+        card_instance_id = await card_instance.async_create_and_deliver_card(
             card_template_id, convert_json_values_to_string(card_data)
         )
         # 流式更新卡片
         try:
             # 更新成输入中状态
-            card_instance.streaming(
+            await card_instance.async_streaming(
                 card_instance_id,
                 content_key=content_key,
                 content_value="",
@@ -91,12 +91,12 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
                 for progress in range(101):
                     if progress % 20 == 0:
                         update_card_data["preparations"][-1]["progress"] = progress
-                        card_instance.put_card_data(
+                        await card_instance.async_put_card_data(
                             card_instance_id,
                             card_data=convert_json_values_to_string(update_card_data),
                             cardUpdateOptions=cardUpdateOptions,
                         )
-                        time.sleep(random())
+                        await asyncio.sleep(random())
             fake_content_values = [
                 "## 过去一个月的营收分析",
                 "\n本报告分析了过去一个月的营收情况。",
@@ -107,7 +107,7 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
             content_value = ""
             for fake_content_value in fake_content_values:
                 content_value += fake_content_value
-                card_instance.streaming(
+                await card_instance.async_streaming(
                     card_instance_id,
                     content_key=content_key,
                     content_value=content_value,
@@ -115,8 +115,8 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
                     finished=False,
                     failed=False,
                 )
-                time.sleep(random())
-            card_instance.streaming(
+                await asyncio.sleep(random())
+            await card_instance.async_streaming(
                 card_instance_id,
                 content_key=content_key,
                 content_value=content_value,
@@ -180,30 +180,30 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
             }
             update_card_data = []
             update_card_data.append({"markdown": line_md, "chart": line_chart})
-            card_instance.put_card_data(
+            await card_instance.async_put_card_data(
                 card_instance_id,
                 card_data=convert_json_values_to_string({"charts": update_card_data}),
                 cardUpdateOptions=cardUpdateOptions,
             )
-            time.sleep(random() * 2)
+            await asyncio.sleep(random() * 2)
 
             update_card_data.append({"markdown": bar_md, "chart": bar_chart})
-            card_instance.put_card_data(
+            await card_instance.async_put_card_data(
                 card_instance_id,
                 card_data=convert_json_values_to_string({"charts": update_card_data}),
                 cardUpdateOptions=cardUpdateOptions,
             )
-            time.sleep(random() * 2)
+            await asyncio.sleep(random() * 2)
 
             update_card_data.append({"markdown": pie_md, "chart": pie_chart})
-            card_instance.put_card_data(
+            await card_instance.async_put_card_data(
                 card_instance_id,
                 card_data=convert_json_values_to_string({"charts": update_card_data}),
                 cardUpdateOptions=cardUpdateOptions,
             )
         except Exception as e:
             self.logger.exception(e)
-            card_instance.streaming(
+            await card_instance.async_streaming(
                 card_instance_id,
                 content_key=content_key,
                 content_value="",
