@@ -148,11 +148,16 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
 
     try {
       // 卡片模板 ID
-      String cardTemplateId = "fcc1df51-17bb-403f-aca9-65f1c6919129.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+      String cardTemplateId = "db56f2c2-f609-4878-9a34-46f6a0194a73.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
       // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
       JSONObject cardData = new JSONObject();
-      cardData.put("last_message", "事件链演示");
-      cardData.put("markdown", "<font colorTokenV2=common_green1_color>动态显示的 markdown 内容</font>");
+      cardData.put("lastMessage", "审批");
+      cardData.put("title", "朱小志提交的财务报销");
+      cardData.put("type", "差旅费");
+      cardData.put("amount", "1000元");
+      cardData.put("reason", "出差费用");
+      cardData.put("createTime", "2023-10-10 10:10:10");
+      cardData.put("status", "");
 
       // 创建并投放卡片
       JSONObject options = new JSONObject();

@@ -16,7 +16,3 @@
 
 [循环渲染容器之群接龙](https://wolai.dingtalk.com/99LsCipcu9fJCnNKaypC4W)
 
-# 卡片模板
-
-![](循环渲染容器之群接龙.png)
-

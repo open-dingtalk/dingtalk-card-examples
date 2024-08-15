@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
 
@@ -116,13 +115,18 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 	logger.GetLogger().Infof("received message: %v", content)
 
 	// 卡片模板 ID
-	CARD_TEMPLATE_ID := "fcc1df51-17bb-403f-aca9-65f1c6919129.schema" // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+	CARD_TEMPLATE_ID := "db56f2c2-f609-4878-9a34-46f6a0194a73.schema" // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
 	// 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
 	cardData := &dingtalkcard_1_0.CreateAndDeliverRequestCardData{
 		CardParamMap: make(map[string]*string),
 	}
-	cardData.CardParamMap["last_message"] = tea.String("事件链演示")
-	cardData.CardParamMap["markdown"] = tea.String("<font colorTokenV2=common_green1_color>动态显示的 markdown 内容</font>")
+	cardData.CardParamMap["lastMessage"] = tea.String("审批")
+	cardData.CardParamMap["title"] = tea.String("朱小志提交的财务报销")
+	cardData.CardParamMap["type"] = tea.String("差旅费")
+	cardData.CardParamMap["amount"] = tea.String("1000元")
+	cardData.CardParamMap["reason"] = tea.String("出差费用")
+	cardData.CardParamMap["createTime"] = tea.String("2023-10-10 10:10:10")
+	cardData.CardParamMap["status"] = tea.String("")
 	imGroupOpenSpaceModel := &dingtalkcard_1_0.CreateAndDeliverRequestImGroupOpenSpaceModel{
 		SupportForward: tea.Bool(true),
 	}
@@ -177,35 +181,13 @@ func onCardCallback(ctx context.Context, request *card.CardRequest) (*card.CardR
 	 */
 	logger.GetLogger().Infof("card callback message: %v", request)
 
-	updateCardData := make(map[string]string)
-	userPrivateData := make(map[string]string)
+	updateCardData := make(map[string]string)  // 更新公有数据
+	userPrivateData := make(map[string]string) // 更新触发回传请求事件的人的私有数据
 
 	params := request.CardActionData.CardPrivateData.Params
-	if variable, ok := params["var"]; ok && variable != nil {
-		if variable == "pub_url" {
-			updateCardData["pub_url"] = ""
-			updateCardData["pub_url_msg"] = ""
-			status := rand.Intn(2)
-			if status == 0 {
-				randomNumber := rand.Intn(101)
-				updateCardData["pub_url_status"] = "failed"
-				updateCardData["pub_url_msg"] = fmt.Sprintf("更新失败%d", randomNumber)
-			} else {
-				updateCardData["pub_url_status"] = "success"
-				updateCardData["pub_url"] = "dingtalk://dingtalkclient/page/link?web_wnd=workbench&pc_slide=true&hide_bar=true&url=https://github.com/open-dingtalk/dingtalk-card-examples"
-			}
-		} else if variable == "pri_url" {
-			userPrivateData["pri_url"] = ""
-			userPrivateData["pri_url_msg"] = ""
-			status := rand.Intn(2)
-			if status == 0 {
-				randomNumber := rand.Intn(101)
-				userPrivateData["pri_url_status"] = "failed"
-				userPrivateData["pri_url_msg"] = fmt.Sprintf("更新失败%d", randomNumber)
-			} else {
-				userPrivateData["pri_url_status"] = "success"
-				userPrivateData["pri_url"] = "dingtalk://dingtalkclient/page/link?web_wnd=workbench&pc_slide=true&hide_bar=true&url=https://github.com/open-dingtalk/dingtalk-card-examples"
-			}
+	if action, ok := params["action"]; ok && action != nil {
+		if action == "agree" || action == "reject" {
+			updateCardData["status"] = action.(string)
 		}
 	}
 

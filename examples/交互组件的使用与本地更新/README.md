@@ -21,7 +21,3 @@
 # 视频演示
 
 [交互组件的使用与本地更新](https://wolai.dingtalk.com/cpUtbjr8jjTa4GKUonaNMD)
-
-# 卡片模板
-
-![](交互组件的使用与本地更新.png)

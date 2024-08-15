@@ -70,14 +70,17 @@ const onBotMessage = async (event: DWClientDownStream) => {
   console.log("received message: ", content);
 
   // 卡片模板 ID
-  const cardTemplateId = "fcc1df51-17bb-403f-aca9-65f1c6919129.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+  const cardTemplateId = "db56f2c2-f609-4878-9a34-46f6a0194a73.schema"; // 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
   // 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
   const cardData: Record<string, any> = {
-    last_message: "事件链演示",
-    markdown:
-      "<font colorTokenV2=common_green1_color>动态显示的 markdown 内容</font>",
+    lastMessage: "审批",
+    title: "朱小志提交的财务报销",
+    type: "差旅费",
+    amount: "1000元",
+    reason: "出差费用",
+    createTime: "2023-10-10 10:10:10",
+    status: "",
   };
-
   const cardInstance = new CardReplier(client, message);
   // 创建并投放卡片
   const cardInstanceId = await cardInstance.createAndDeliverCard({
@@ -98,39 +101,15 @@ const onCardCallback = async (event: DWClientDownStream) => {
   const message = JSON.parse(event.data);
   console.log("card callback message: ", message);
 
-  const updateCardData: Record<string, any> = {};
-  const userPrivateData: Record<string, any> = {};
+  const updateCardData: Record<string, any> = {};  // 更新公有数据
+  const userPrivateData: Record<string, any> = {};  // 更新触发回传请求事件的人的私有数据
 
   const cardPrivateData = JSON.parse(message.content).cardPrivateData;
   const params = cardPrivateData.params;
-  const variable = params.var;
+  const action = params.action;
 
-  if (variable === "pub_url") {
-    updateCardData.pub_url = "";
-    updateCardData.pub_url_msg = "";
-    updateCardData.pub_url_status = Math.round(Math.random())
-      ? "success"
-      : "failed";
-    if (updateCardData.pub_url_status === "success") {
-      updateCardData.pub_url =
-        "dingtalk://dingtalkclient/page/link?web_wnd=workbench&pc_slide=true&hide_bar=true&url=https://www.dingtalk.com";
-    } else {
-      updateCardData.pub_url_msg = `更新失败${Math.floor(Math.random() * 101)}`;
-    }
-  } else if (variable === "pri_url") {
-    userPrivateData.pri_url = "";
-    userPrivateData.pri_url_msg = "";
-    userPrivateData.pri_url_status = Math.round(Math.random())
-      ? "success"
-      : "failed";
-    if (userPrivateData.pri_url_status === "success") {
-      userPrivateData.pri_url =
-        "dingtalk://dingtalkclient/page/link?web_wnd=workbench&pc_slide=true&hide_bar=true&url=https://github.com/open-dingtalk/dingtalk-card-examples";
-    } else {
-      userPrivateData.pri_url_msg = `更新失败${Math.floor(
-        Math.random() * 101
-      )}`;
-    }
+  if (action === "agree" || action === "reject") {
+    updateCardData.status = action;
   }
 
   const cardUpdateOptions = {

@@ -18,8 +18,3 @@
 # 视频演示
 
 [事件链配置演示](https://wolai.dingtalk.com/noXbKSN3n85YVjDUdFjiNv)
-
-# 卡片模板
-
-![](事件链配置演示.png)
-

@@ -1,3 +1,3 @@
-dingtalk-stream>=0.18.1
+dingtalk-stream>=0.21.0
 dashscope
 loguru

@@ -17,7 +17,3 @@
 # 视频演示
 
 [循环渲染容器之交互组件的使用与服务端更新](https://wolai.dingtalk.com/gJ9gyTRBMf4gG9gZyE161a)
-
-# 卡片模板
-
-![](循环渲染容器之交互组件的使用与服务端更新.png)

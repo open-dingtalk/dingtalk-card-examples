@@ -7,7 +7,6 @@
 examples 目录下的每一个文件夹都是一个独立的卡片使用示例，一般包含以下这些内容：
 
 - 卡片例子介绍 `README.md`
-- 卡片预览图片 `{folder_name}.png`
 - 导出的卡片模板 JSON 文件 `{folder_name}.json`（可用于导入到自己的卡片模板里查看具体模板内容及相关配置，导入步骤如下）
   - 在[卡片平台](https://open-dev.dingtalk.com/fe/card)创建一个卡片模板
   - 右上角菜单按钮中点击 `更多` -> `导入` 按钮

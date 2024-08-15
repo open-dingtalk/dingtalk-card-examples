@@ -14,6 +14,3 @@
 
 [AI 卡片同时更新普通变量和流式变量](https://wolai.dingtalk.com/mLJUC42A7PJUJWWHwuP5iQ)
 
-# 卡片模板
-
-![](./AI%20卡片同时更新普通变量和流式变量.png)

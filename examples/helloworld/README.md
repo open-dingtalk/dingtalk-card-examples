@@ -17,7 +17,3 @@
 # 视频演示
 
 [hello world](https://wolai.dingtalk.com/89gp6tEDFQaXTM2RqDsd4f)
-
-# 卡片模板
-
-![](helloworld.png)

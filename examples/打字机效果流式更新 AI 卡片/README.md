@@ -19,7 +19,3 @@ set DASHSCOPE_API_KEY=your-api-key  # Windows
 # 视频演示
 
 [打字机效果流式更新 AI 卡片](https://wolai.dingtalk.com/nN92Sj5GipFt8yVmUxndog)
-
-# 卡片模板
-
-![](./打字机效果流式更新%20AI%20卡片.png)
