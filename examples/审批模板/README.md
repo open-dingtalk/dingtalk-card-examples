@@ -11,4 +11,4 @@
 
 # 视频演示
 
-[审批](https://wolai.dingtalk.com/ddKAki4UNuBgu5o51Dv9XW)
+[审批模板](https://wolai.dingtalk.com/ddKAki4UNuBgu5o51Dv9XW)
