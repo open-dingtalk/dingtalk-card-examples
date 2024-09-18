@@ -24,7 +24,7 @@ public class CardDynamicDataCallbackHandler implements OpenDingTalkCallbackListe
   @Override
   public JSONObject execute(String messageString) {
     /**
-     * 卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
+     * 卡片动态数据源回调文档：https://open.dingtalk.com/document/isvapp/dynamic-data-source
      */
     log.info("card callback message: " + messageString);
 
