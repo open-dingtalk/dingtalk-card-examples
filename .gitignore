@@ -4,4 +4,4 @@ node_modules/
 
 .tool-versions
 
-.debug*.json
+.debug_*

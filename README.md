@@ -26,6 +26,8 @@ examples 目录下的每一个文件夹都是一个独立的卡片使用示例�
 
 所有示例代码都是通过 [服务端 Stream 模式](https://open.dingtalk.com/document/resourcedownload/introduction-to-stream-mode) 启动运行的。钉钉 Stream 模式可以用于多种场景的回调，包括事件订阅、机器人接收消息、卡片回调等。相关教程：[Stream Mode](https://opensource.dingtalk.com/developerpedia/docs/explore/tutorials/stream/overview)。
 
+Stream 模式和 HTTP 模式仅仅是网络请求的方式和创建卡片时的 callbackType 参数不同，创建并投放卡片、更新卡片、对卡片事件回调的逻辑处理并没有任何不同。因此 HTTP 模式接入卡片的业务也可以参考该示例中的代码。
+
 下面以 example/helloworld 为例，验证卡片开发环境是否已经成功配置。该例子需要完成[创建企业内部机器人](https://open.dingtalk.com/document/orgapp/the-creation-and-installation-of-the-application-robot-in-the)的前置流程，不同语言的聊天机器人教程参考：[聊天机器人](https://opensource.dingtalk.com/developerpedia/docs/category/%E8%81%8A%E5%A4%A9%E6%9C%BA%E5%99%A8%E4%BA%BA)。
 
 该示例的视频演示：[hello world](https://wolai.dingtalk.com/89gp6tEDFQaXTM2RqDsd4f)。
@@ -125,7 +127,7 @@ Steram 没有收到卡片交互组件的回传请求事件回调通常可以从�
 
 # 反馈
 
-您的反馈会帮助我们进一步完善钉钉互动卡片，欢迎您扫码反馈。
+您的反馈会帮助我们进一步完善钉钉互动卡片，欢迎提交反馈。
 
-<img src="feedback_form_qr_code.png" width="320" />
+[反馈入口](https://g.alicdn.com/aes/tracker-survey-preview/0.0.13/survey.html?pid=mE8hHE&id=3812)
 
