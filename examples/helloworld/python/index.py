@@ -49,7 +49,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
 
         # 卡片模板 ID
         card_template_id = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
-        # 卡片公有数据，非字符串类型的卡片数据参考文档：https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
+        # 卡片公有数据，非字符串类型的卡片数据参考文档: https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
         card_data = {
             "markdown": content,
             "submitted": False,
@@ -60,7 +60,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         card_instance = dingtalk_stream.CardReplier(
             self.dingtalk_client, incoming_message
         )
-        # 创建并投放卡片
+        # 创建并投放卡片: https://open.dingtalk.com/document/isvapp/create-and-deliver-cards
         card_instance_id = card_instance.create_and_deliver_card(
             card_template_id,
             convert_json_values_to_string(card_data),
@@ -68,7 +68,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
 
         self.logger.info(f"reply card: {card_instance_id} {card_data}")
 
-        # 更新卡片
+        # 更新卡片: https://open.dingtalk.com/document/isvapp/interactive-card-update-interface
         time.sleep(2)
         update_card_data = {"tag": "更新后的标签"}
         card_instance.put_card_data(

@@ -257,7 +257,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
   };
 
   const cardInstance = new CardReplier(client, message);
-  // 创建并投放卡片
+  // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
   const cardInstanceId = await cardInstance.createAndDeliverCard({
     cardTemplateId,
     cardData: convertJSONValuesToString(cardData),

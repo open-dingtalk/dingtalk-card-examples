@@ -183,7 +183,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       multiCheckboxItems.add(createCheckboxItem(3, "多选复选框选项 4"));
       cardData.put("multiCheckboxItems", multiCheckboxItems);
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);

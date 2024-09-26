@@ -62,7 +62,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         card_instance = dingtalk_stream.CardReplier(
             self.dingtalk_client, incoming_message
         )
-        # 创建并投放卡片
+        # 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
         card_instance_id = card_instance.create_and_deliver_card(
             card_template_id,
             convert_json_values_to_string(card_data),

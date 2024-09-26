@@ -125,6 +125,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       Boolean isFinalize,
       Boolean isError) {
 
+    // 流式更新: https://open.dingtalk.com/document/isvapp/api-streamingupdate
     JSONObject data = new JSONObject().fluentPut("outTrackId", cardInstanceId);
     data.put("key", contentKey);
     data.put("content", contentValue);
@@ -258,7 +259,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       JSONObject cardData = new JSONObject();
       cardData.put(contentKey, "");
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);

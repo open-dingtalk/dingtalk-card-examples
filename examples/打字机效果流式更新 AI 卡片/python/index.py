@@ -78,11 +78,11 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
         card_instance = dingtalk_stream.AICardReplier(
             self.dingtalk_client, incoming_message
         )
-        # 先投放卡片
+        # 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
         card_instance_id = card_instance.create_and_deliver_card(
             card_template_id, card_data
         )
-        # 再流式更新卡片
+        # 再流式更新卡片: https://open.dingtalk.com/document/isvapp/api-streamingupdate
         try:
             full_content_value = call_with_stream(
                 incoming_message.text.content,

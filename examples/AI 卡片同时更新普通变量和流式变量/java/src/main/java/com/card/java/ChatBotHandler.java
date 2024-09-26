@@ -237,15 +237,15 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       cardData.put("preparations", new JSONArray());
       cardData.put("charts", new JSONArray());
       cardData.put("config", new JSONObject().fluentPut("autoLayout", true));
-      // 先投放卡片
+      // 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);
       // 流式更新卡片
       try {
-        // 更新成输入中状态
+        // 更新成输入中状态: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
         streaming(cardInstanceId, contentKey, "", true, false, false);
-        // 更新卡片
+        // 更新卡片: https://open.dingtalk.com/document/orgapp/interactive-card-update-interface
         JSONObject cardUpdateOptions = new JSONObject()
             .fluentPut("updateCardDataByKey", true)
             .fluentPut("updatePrivateDataByKey", true);

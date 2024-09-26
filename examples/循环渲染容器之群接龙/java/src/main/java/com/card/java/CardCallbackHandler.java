@@ -37,6 +37,7 @@ public class CardCallbackHandler implements OpenDingTalkCallbackListener<String,
 
   public JSONObject getUserInfoByUserId(String userId)
       throws IOException {
+    // 查询用户详情: https://open.dingtalk.com/document/isvapp/query-user-details
     String accessToken = accessTokenService.getAccessToken();
     String url = "https://oapi.dingtalk.com/topapi/v2/user/get?access_token=" + accessToken;
     JSONObject data = new JSONObject();

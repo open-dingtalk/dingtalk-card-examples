@@ -60,13 +60,13 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
         card_instance = dingtalk_stream.AICardReplier(
             self.dingtalk_client, incoming_message
         )
-        # 先投放卡片
+        # 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
         card_instance_id = await card_instance.async_create_and_deliver_card(
             card_template_id, convert_json_values_to_string(card_data)
         )
         # 流式更新卡片
         try:
-            # 更新成输入中状态
+            # 更新成输入中状态: https://open.dingtalk.com/document/orgapp/api-streamingupdate
             await card_instance.async_streaming(
                 card_instance_id,
                 content_key=content_key,
@@ -75,7 +75,7 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
                 finished=False,
                 failed=False,
             )
-            # 更新卡片
+            # 更新卡片: https://open.dingtalk.com/document/orgapp/interactive-card-update-interface
             cardUpdateOptions = {
                 "updateCardDataByKey": True,
                 "updatePrivateDataByKey": True,

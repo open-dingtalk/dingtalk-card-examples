@@ -188,7 +188,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
               .fluentPut("dynamicDataSourceId", demoDynamicDataSourceId)
               .fluentPut("pullConfig", pullConfig)));
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       options.put("openSpaceId", "dtv1.card//ONE_BOX." + message.getConversationId());
       options.put("topOpenSpaceModel", new JSONObject().fluentPut("spaceType", "ONE_BOX"));

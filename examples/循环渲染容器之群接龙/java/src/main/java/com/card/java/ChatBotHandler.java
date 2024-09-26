@@ -191,7 +191,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       cardData.put("title", receivedMessage);
       cardData.put("joined", false);
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       createAndDeliverCard(message, cardTemplateId, jsonObjectUtils.convertJSONValuesToString(cardData), options);
     } catch (NoSuchAlgorithmException e) {

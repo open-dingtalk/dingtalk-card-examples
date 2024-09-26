@@ -159,7 +159,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       cardData.put("createTime", "2023-10-10 10:10:10");
       cardData.put("status", "");
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);

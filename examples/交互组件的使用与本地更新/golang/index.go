@@ -218,7 +218,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 		sendCardRequest.ImRobotOpenDeliverModel = imRobotOpenDeliverModel
 	}
 
-	// 创建并投放卡片
+	// 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
 	sendCardResponse, err := dingtalkClient.SendCard(sendCardRequest)
 	if err != nil {
 		logger.GetLogger().Errorf("reply card failed: %+v", sendCardResponse)

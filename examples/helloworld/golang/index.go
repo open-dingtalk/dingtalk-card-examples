@@ -199,7 +199,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 		sendCardRequest.ImRobotOpenDeliverModel = imRobotOpenDeliverModel
 	}
 
-	// 创建并投放卡片
+	// 创建并投放卡片: https://open.dingtalk.com/document/isvapp/create-and-deliver-cards
 	sendCardResponse, err := dingtalkClient.SendCard(sendCardRequest)
 	if err != nil {
 		logger.GetLogger().Errorf("reply card failed: %+v", sendCardResponse)
@@ -221,7 +221,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 		CardData:          updateCardData,
 		CardUpdateOptions: updateOptions,
 	}
-	// 更新卡片
+	// 更新卡片: https://open.dingtalk.com/document/orgapp/interactive-card-update-interface
 	updateCardResponse, err := dingtalkClient.UpdateCard(updateCardRequest)
 	if err != nil {
 		logger.GetLogger().Errorf("update card failed: %+v", updateCardResponse)

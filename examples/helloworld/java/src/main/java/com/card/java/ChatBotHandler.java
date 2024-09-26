@@ -193,7 +193,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       cardData.put("title", "钉钉互动卡片");
       cardData.put("tag", "标签");
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/isvapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);
@@ -204,7 +204,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
         Thread.currentThread().interrupt();
       }
 
-      // 更新卡片
+      // 更新卡片: https://open.dingtalk.com/document/orgapp/interactive-card-update-interface
       JSONObject updateCardData = new JSONObject();
       updateCardData.put("tag", "更新后的标签");
       JSONObject updateOptions = new JSONObject();

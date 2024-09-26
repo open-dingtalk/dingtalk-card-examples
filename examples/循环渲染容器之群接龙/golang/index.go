@@ -166,43 +166,6 @@ func (c *DingTalkClient) SendCard(request *dingtalkcard_1_0.CreateAndDeliverRequ
 	return resp, nil
 }
 
-func (c *DingTalkClient) UpdateCard(request *dingtalkcard_1_0.UpdateCardRequest) (*dingtalkcard_1_0.UpdateCardResponse, error) {
-	accessToken, err := c.GetAccessToken()
-	if err != nil {
-		return nil, err
-	}
-	headers := &dingtalkcard_1_0.UpdateCardHeaders{}
-	headers.XAcsDingtalkAccessToken = tea.String(accessToken)
-
-	resp, tryErr := func() (resp *dingtalkcard_1_0.UpdateCardResponse, _e error) {
-		defer func() {
-			if r := tea.Recover(recover()); r != nil {
-				_e = r
-			}
-		}()
-		result, _err := c.cardClient.UpdateCardWithOptions(request, headers, &util.RuntimeOptions{})
-		if _err != nil {
-			return nil, _err
-		}
-
-		return result, nil
-	}()
-	if tryErr != nil {
-		var sdkError = &tea.SDKError{}
-		if _t, ok := tryErr.(*tea.SDKError); ok {
-			sdkError = _t
-		} else {
-			sdkError.Message = tea.String(tryErr.Error())
-		}
-		if !tea.BoolValue(util.Empty(sdkError.Code)) && !tea.BoolValue(util.Empty(sdkError.Message)) {
-			logger.GetLogger().Errorf("UpdateCardWithOptions failed, clientId=%s, err=%+v", c.ClientID, sdkError)
-		}
-		return nil, tryErr
-	}
-
-	return resp, nil
-}
-
 func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackDataModel) ([]byte, error) {
 	content := strings.TrimSpace(data.Text.Content)
 	logger.GetLogger().Infof("received message: %v", content)
@@ -252,7 +215,7 @@ func OnChatBotMessageReceived(ctx context.Context, data *chatbot.BotCallbackData
 		sendCardRequest.ImRobotOpenDeliverModel = imRobotOpenDeliverModel
 	}
 
-	// 创建并投放卡片
+	// 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
 	sendCardResponse, err := dingtalkClient.SendCard(sendCardRequest)
 	if err != nil {
 		logger.GetLogger().Infof("reply card failed: %+v", sendCardResponse)

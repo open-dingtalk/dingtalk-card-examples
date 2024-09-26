@@ -80,7 +80,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
   };
 
   const cardInstance = new CardReplier(client, message);
-  // 创建并投放卡片
+  // 创建并投放卡片: https://open.dingtalk.com/document/isvapp/create-and-deliver-cards
   const cardInstanceId = await cardInstance.createAndDeliverCard({
     cardTemplateId,
     cardData: convertJSONValuesToString(cardData),
@@ -88,7 +88,7 @@ const onBotMessage = async (event: DWClientDownStream) => {
 
   console.log("reply card: ", cardInstanceId, cardData);
 
-  // 更新卡片
+  // 更新卡片: https://open.dingtalk.com/document/orgapp/interactive-card-update-interface
   setTimeout(() => {
     const updateCardData: Record<string, any> = { tag: "更新后的标签" };
     cardInstance.putCardData({

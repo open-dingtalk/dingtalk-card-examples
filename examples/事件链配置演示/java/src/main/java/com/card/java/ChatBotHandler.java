@@ -154,7 +154,7 @@ public class ChatBotHandler implements OpenDingTalkCallbackListener<ChatbotMessa
       cardData.put("last_message", "事件链演示");
       cardData.put("markdown", "<font colorTokenV2=common_green1_color>动态显示的 markdown 内容</font>");
 
-      // 创建并投放卡片
+      // 创建并投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
       JSONObject options = new JSONObject();
       String cardInstanceId = createAndDeliverCard(message, cardTemplateId,
           jsonObjectUtils.convertJSONValuesToString(cardData), options);
