@@ -1,0 +1,2 @@
+dingtalk-stream>=0.21.0
+loguru

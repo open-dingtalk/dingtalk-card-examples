@@ -1,9 +1,9 @@
 import os
 import json
-import time
 import logging
 import argparse
 from loguru import logger
+from urllib.parse import quote
 from dingtalk_stream import AckMessage
 import dingtalk_stream
 
@@ -46,16 +46,70 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         incoming_message = dingtalk_stream.ChatbotMessage.from_dict(callback.data)
         content = (incoming_message.text.content or "").strip()
         self.logger.info(f"received message: {content}")
-        self.logger.info(f"received message: {callback.data}")
 
         # 卡片模板 ID
-        card_template_id = "2c278d79-fc0b-41b4-b14e-8b8089dc08e8.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+        card_template_id = "b23d3b9d-1c9c-4a3b-82a8-744d475c483d.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
         # 卡片公有数据，非字符串类型的卡片数据参考文档: https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
         card_data = {
-            "markdown": content,
-            "submitted": False,
-            "title": "钉钉互动卡片",
-            "tag": "标签",
+            "more_detail_url": f"dingtalk://dingtalkclient/page/link?pc_slide=true&url={quote('http://localhost:3000?page=detail&id=123')}",
+            "evaluate_url": f"dingtalk://dingtalkclient/page/link?pc_slide=true&url={quote('http://localhost:3000?page=evaluate&id=123')}",
+            "table": {
+                "data": [
+                    {
+                        "uv": "324",
+                        "pv": "433",
+                        "rank": 1,
+                        "appItem": {
+                        "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
+                        "name": "考勤打卡"
+                        }
+                    },
+                    {
+                        "uv": "350",
+                        "pv": "354",
+                        "rank": 2,
+                        "appItem": {
+                        "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
+                        "name": "智能人事"
+                        }
+                    },
+                    {
+                        "uv": "189",
+                        "pv": "322",
+                        "rank": 3,
+                        "appItem": {
+                        "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
+                        "name": "日志"
+                        }
+                    }
+                ],
+                "meta": [
+                    {
+                        "aliasName": "",
+                        "dataType": "STRING",
+                        "alias": "rank",
+                        "weight": 10
+                    },
+                    {
+                        "aliasName": "应用名",
+                        "dataType": "MICROAPP",
+                        "alias": "appItem",
+                        "weight": 40
+                    },
+                    {
+                        "aliasName": "点击次数",
+                        "dataType": "STRING",
+                        "alias": "pv",
+                        "weight": 25
+                    },
+                    {
+                        "aliasName": "点击人数",
+                        "dataType": "STRING",
+                        "alias": "uv",
+                        "weight": 25
+                    }
+                ]
+            }
         }
 
         card_instance = dingtalk_stream.CardReplier(
@@ -68,17 +122,6 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         )
 
         self.logger.info(f"reply card: {card_instance_id} {card_data}")
-
-        # 更新卡片: https://open.dingtalk.com/document/isvapp/interactive-card-update-interface
-        time.sleep(2)
-        update_card_data = {"tag": "更新后的标签"}
-        card_instance.put_card_data(
-            card_instance_id,
-            convert_json_values_to_string(update_card_data),
-            cardUpdateOptions={"updateCardDataByKey": True},
-        )
-        self.logger.info(f"update card: {card_instance_id} {update_card_data}")
-
         return AckMessage.STATUS_OK, "OK"
 
 
