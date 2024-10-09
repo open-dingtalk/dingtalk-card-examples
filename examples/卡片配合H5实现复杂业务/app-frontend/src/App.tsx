@@ -128,7 +128,6 @@ function App() {
   const onFinish = async (values: FieldType) => {
     console.log("submit values: ", values);
     // 调用接口提交表单数据，并在服务端调用更新卡片数据接口把表单数据更新到卡片上
-    // 把数据传到服务端，用 Python 搭建一个本地服务端用于演示
     try {
       const response = await fetch("http://localhost:5000/api/submit", {
         method: "POST",
