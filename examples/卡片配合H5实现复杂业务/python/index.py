@@ -51,8 +51,7 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
         card_template_id = "b23d3b9d-1c9c-4a3b-82a8-744d475c483d.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
         # 卡片公有数据，非字符串类型的卡片数据参考文档: https://open.dingtalk.com/document/orgapp/instructions-for-filling-in-api-card-data
         card_data = {
-            "more_detail_url": f"dingtalk://dingtalkclient/page/link?pc_slide=true&url={quote('http://localhost:3000?page=detail&id=123')}",
-            "evaluate_url": f"dingtalk://dingtalkclient/page/link?pc_slide=true&url={quote('http://localhost:3000?page=evaluate&id=123')}",
+            "evaluate_done": False,
             "table": {
                 "data": [
                     {
@@ -60,56 +59,56 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
                         "pv": "433",
                         "rank": 1,
                         "appItem": {
-                        "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
-                        "name": "考勤打卡"
-                        }
+                            "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
+                            "name": "考勤打卡",
+                        },
                     },
                     {
                         "uv": "350",
                         "pv": "354",
                         "rank": 2,
                         "appItem": {
-                        "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
-                        "name": "智能人事"
-                        }
+                            "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
+                            "name": "智能人事",
+                        },
                     },
                     {
                         "uv": "189",
                         "pv": "322",
                         "rank": 3,
                         "appItem": {
-                        "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
-                        "name": "日志"
-                        }
-                    }
+                            "icon": "https://static.dingtalk.com/media/lALPDeC2uGvNwy3NArzNArw_700_700.png",
+                            "name": "日志",
+                        },
+                    },
                 ],
                 "meta": [
                     {
                         "aliasName": "",
                         "dataType": "STRING",
                         "alias": "rank",
-                        "weight": 10
+                        "weight": 10,
                     },
                     {
                         "aliasName": "应用名",
                         "dataType": "MICROAPP",
                         "alias": "appItem",
-                        "weight": 40
+                        "weight": 40,
                     },
                     {
                         "aliasName": "点击次数",
                         "dataType": "STRING",
                         "alias": "pv",
-                        "weight": 25
+                        "weight": 25,
                     },
                     {
                         "aliasName": "点击人数",
                         "dataType": "STRING",
                         "alias": "uv",
-                        "weight": 25
-                    }
-                ]
-            }
+                        "weight": 25,
+                    },
+                ],
+            },
         }
 
         card_instance = dingtalk_stream.CardReplier(
@@ -120,48 +119,24 @@ class ChatBotHandler(dingtalk_stream.ChatbotHandler):
             card_template_id,
             convert_json_values_to_string(card_data),
         )
-
         self.logger.info(f"reply card: {card_instance_id} {card_data}")
-        return AckMessage.STATUS_OK, "OK"
 
-
-class CardCallbackHandler(dingtalk_stream.CallbackHandler):
-    def __init__(self, logger: logging.Logger = logger):
-        super(dingtalk_stream.CallbackHandler, self).__init__()
-        if logger:
-            self.logger = logger
-
-    async def process(self, callback: dingtalk_stream.CallbackMessage):
-        """
-        卡片事件回调文档：https://open.dingtalk.com/document/orgapp/event-callback-card
-        """
-        incoming_message = dingtalk_stream.CardCallbackMessage.from_dict(callback.data)
-        self.logger.info(f"card callback message: {incoming_message.to_dict()}")
-
-        user_private_data = {}
-
-        card_private_data = incoming_message.content.get("cardPrivateData", {})
-        params = card_private_data.get("params", {})
-        local_input = params.get("local_input")
-
-        if local_input is not None:
-            user_private_data["private_input"] = local_input
-            user_private_data["submitted"] = True
-
-        cardUpdateOptions = {
-            "updateCardDataByKey": True,
-            "updatePrivateDataByKey": True,
+        # 更新卡片: https://open.dingtalk.com/document/isvapp/interactive-card-update-interface
+        update_card_data = {
+            "more_detail_url": f"dingtalk://dingtalkclient/page/link?pc_slide=true&url={quote('http://localhost:3000?page=detail&id=' + str(card_instance_id))}",
+            "evaluate_url": f"dingtalk://dingtalkclient/page/link?pc_slide=true&url={quote('http://localhost:3000?page=evaluate&id=' + str(card_instance_id))}",
         }
-
-        response = {
-            "cardUpdateOptions": cardUpdateOptions,
-            "userPrivateData": {
-                "cardParamMap": convert_json_values_to_string(user_private_data),
+        card_instance.put_card_data(
+            card_instance_id,
+            convert_json_values_to_string(update_card_data),
+            cardUpdateOptions={
+                "updateCardDataByKey": True,
+                "updatePrivateDataByKey": True,
             },
-        }
+        )
+        self.logger.info(f"update card: {card_instance_id} {update_card_data}")
 
-        self.logger.info(f"card callback response: {response}")
-        return AckMessage.STATUS_OK, response
+        return AckMessage.STATUS_OK, "OK"
 
 
 def main():
@@ -171,9 +146,6 @@ def main():
     client = dingtalk_stream.DingTalkStreamClient(credential)
     client.register_callback_handler(
         dingtalk_stream.ChatbotMessage.TOPIC, ChatBotHandler()
-    )
-    client.register_callback_handler(
-        dingtalk_stream.CallbackHandler.TOPIC_CARD_CALLBACK, CardCallbackHandler()
     )
     client.start_forever()
 

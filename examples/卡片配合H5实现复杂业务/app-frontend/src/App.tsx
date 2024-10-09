@@ -71,7 +71,7 @@ const dataSource = [
       },
       {
         key: "2-3",
-        appName: "昨天",
+        appName: "前天",
         pv: 68,
         uv: 67,
       },
@@ -97,7 +97,7 @@ const dataSource = [
       },
       {
         key: "3-3",
-        appName: "昨天",
+        appName: "前天",
         pv: 84,
         uv: 54,
       },
@@ -128,10 +128,28 @@ function App() {
   const onFinish = async (values: FieldType) => {
     console.log("submit values: ", values);
     // 调用接口提交表单数据，并在服务端调用更新卡片数据接口把表单数据更新到卡片上
-    setSubmitted(true);
-  };
+    // 把数据传到服务端，用 Python 搭建一个本地服务端用于演示
+    try {
+      const response = await fetch("http://localhost:5000/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...values, cardInstanceId: queryParams.id }),
+      });
 
-  // TODO: 添加钉钉免登鉴权
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const result = await response.json();
+      console.log("Success: ", result);
+
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Error: ", error);
+    }
+  };
 
   if (queryParams.page === "detail" && queryParams.id) {
     return (
