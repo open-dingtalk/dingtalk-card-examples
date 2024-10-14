@@ -29,7 +29,7 @@ def define_options():
     return options
 
 
-def call_with_stream(request_content: str, callback: Callable[[str], None]):
+async def call_with_stream(request_content: str, callback: Callable[[str], None]):
     messages = [{"role": "user", "content": request_content}]
     responses = Generation.call(
         Generation.Models.qwen_turbo,
@@ -45,15 +45,19 @@ def call_with_stream(request_content: str, callback: Callable[[str], None]):
             full_content += response.output.choices[0]["message"]["content"]
             full_content_length = len(full_content)
             if full_content_length - length > 20:
-                callback(full_content)
-                logger.info(f"调用流式更新接口更新内容：current_length: {length}, next_length: {full_content_length}")
+                await callback(full_content)
+                logger.info(
+                    f"调用流式更新接口更新内容：current_length: {length}, next_length: {full_content_length}"
+                )
                 length = full_content_length
         else:
             raise Exception(
                 f"Request id: {response.request_id}, Status code: {response.status_code}, error code: {response.code}, error message: {response.message}"
             )
-    callback(full_content)
-    logger.info(f"Request Content: {request_content}\nFull response: {full_content}\nFull response length: {len(full_content)}")
+    await callback(full_content)
+    logger.info(
+        f"Request Content: {request_content}\nFull response: {full_content}\nFull response length: {len(full_content)}"
+    )
     return full_content
 
 
@@ -79,23 +83,26 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
             self.dingtalk_client, incoming_message
         )
         # 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
-        card_instance_id = card_instance.create_and_deliver_card(
+        card_instance_id = await card_instance.async_create_and_deliver_card(
             card_template_id, card_data
         )
+
         # 再流式更新卡片: https://open.dingtalk.com/document/isvapp/api-streamingupdate
-        try:
-            full_content_value = call_with_stream(
-                incoming_message.text.content,
-                lambda content_value: card_instance.streaming(
-                    card_instance_id,
-                    content_key=content_key,
-                    content_value=content_value,
-                    append=False,
-                    finished=False,
-                    failed=False,
-                ),
+        async def callback(content_value: str):
+            return await card_instance.async_streaming(
+                card_instance_id,
+                content_key=content_key,
+                content_value=content_value,
+                append=False,
+                finished=False,
+                failed=False,
             )
-            card_instance.streaming(
+
+        try:
+            full_content_value = await call_with_stream(
+                incoming_message.text.content, callback
+            )
+            await card_instance.async_streaming(
                 card_instance_id,
                 content_key=content_key,
                 content_value=full_content_value,
@@ -105,7 +112,7 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
             )
         except Exception as e:
             self.logger.exception(e)
-            card_instance.streaming(
+            await card_instance.async_streaming(
                 card_instance_id,
                 content_key=content_key,
                 content_value="",
