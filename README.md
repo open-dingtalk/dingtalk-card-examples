@@ -115,11 +115,12 @@ go run index.go --client_id <client_id> --client_secret <client_secret>
 
 ## 没有收到卡片交互组件的回传请求事件
 
-Steram 没有收到卡片交互组件的回传请求事件回调通常可以从以下三个方面进行排查：
+Steram 没有收到卡片交互组件的回传请求事件回调通常可以从以下四个方面进行排查：
 
 1. 检查一下是否注册 topic 为 `/v1.0/card/instances/callback` 的卡片回调。
 2. 检查一下创建卡片时是否传入 callbackType="STREAM" 参数。
-3. 检查一下同一个 client-id 和 client-secret 是否启动了不止一个 Stream 服务。请务必保证一个 client-id 同一时间只启动一个 Stream 服务。如果有线上 Stream 服务在运行，希望在线下启动 Stream 服务开发调试，可以额外创建一个开发调试用的 client-id，线上线下环境分别设置系统环境变量使用不同的 client-id 进行隔离，避免相互干扰。
+3. 检查一下创建卡片时用于生成 access_token 的 client-id 和注册回调服务使用的 client-id 是不是同一个。
+4. 检查一下同一个 client-id 和 client-secret 是否启动了不止一个 Stream 服务。请务必保证一个 client-id 同一时间只启动一个 Stream 服务。如果有线上 Stream 服务在运行，希望在线下启动 Stream 服务开发调试，可以额外创建一个开发调试用的 client-id，线上线下环境分别设置系统环境变量使用不同的 client-id 进行隔离，避免相互干扰。
 
 ## 其它注意事项
 
