@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 import argparse
 from loguru import logger
 from dingtalk_stream import AckMessage
@@ -61,6 +62,54 @@ async def call_with_stream(request_content: str, callback: Callable[[str], None]
     return full_content
 
 
+async def handle_reply_and_update_card(self: dingtalk_stream.ChatbotHandler, incoming_message: dingtalk_stream.ChatbotMessage):
+    # 卡片模板 ID
+    card_template_id = "8aebdfb9-28f4-4a98-98f5-396c3dde41a0.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
+    content_key = "content"
+    card_data = {content_key: ""}
+    card_instance = dingtalk_stream.AICardReplier(
+        self.dingtalk_client, incoming_message
+    )
+    # 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
+    card_instance_id = await card_instance.async_create_and_deliver_card(
+        card_template_id, card_data
+    )
+
+    # 再流式更新卡片: https://open.dingtalk.com/document/isvapp/api-streamingupdate
+    async def callback(content_value: str):
+        return await card_instance.async_streaming(
+            card_instance_id,
+            content_key=content_key,
+            content_value=content_value,
+            append=False,
+            finished=False,
+            failed=False,
+        )
+
+    try:
+        full_content_value = await call_with_stream(
+            incoming_message.text.content, callback
+        )
+        await card_instance.async_streaming(
+            card_instance_id,
+            content_key=content_key,
+            content_value=full_content_value,
+            append=False,
+            finished=True,
+            failed=False,
+        )
+    except Exception as e:
+        self.logger.exception(e)
+        await card_instance.async_streaming(
+            card_instance_id,
+            content_key=content_key,
+            content_value="",
+            append=False,
+            finished=False,
+            failed=True,
+        )
+
+
 class CardBotHandler(dingtalk_stream.ChatbotHandler):
     def __init__(self, logger: logging.Logger = logger):
         super(dingtalk_stream.ChatbotHandler, self).__init__()
@@ -75,52 +124,7 @@ class CardBotHandler(dingtalk_stream.ChatbotHandler):
             self.reply_text("俺只看得懂文字喔~", incoming_message)
             return AckMessage.STATUS_OK, "OK"
 
-        # 卡片模板 ID
-        card_template_id = "8aebdfb9-28f4-4a98-98f5-396c3dde41a0.schema"  # 该模板只用于测试使用，如需投入线上使用，请导入卡片模板 json 到自己的应用下
-        content_key = "content"
-        card_data = {content_key: ""}
-        card_instance = dingtalk_stream.AICardReplier(
-            self.dingtalk_client, incoming_message
-        )
-        # 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
-        card_instance_id = await card_instance.async_create_and_deliver_card(
-            card_template_id, card_data
-        )
-
-        # 再流式更新卡片: https://open.dingtalk.com/document/isvapp/api-streamingupdate
-        async def callback(content_value: str):
-            return await card_instance.async_streaming(
-                card_instance_id,
-                content_key=content_key,
-                content_value=content_value,
-                append=False,
-                finished=False,
-                failed=False,
-            )
-
-        try:
-            full_content_value = await call_with_stream(
-                incoming_message.text.content, callback
-            )
-            await card_instance.async_streaming(
-                card_instance_id,
-                content_key=content_key,
-                content_value=full_content_value,
-                append=False,
-                finished=True,
-                failed=False,
-            )
-        except Exception as e:
-            self.logger.exception(e)
-            await card_instance.async_streaming(
-                card_instance_id,
-                content_key=content_key,
-                content_value="",
-                append=False,
-                finished=False,
-                failed=True,
-            )
-
+        asyncio.create_task(handle_reply_and_update_card(self, incoming_message))
         return AckMessage.STATUS_OK, "OK"
 
 
