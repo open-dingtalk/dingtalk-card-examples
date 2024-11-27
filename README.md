@@ -126,9 +126,4 @@ Steram 没有收到卡片交互组件的回传请求事件回调通常可以从�
 
 [互动卡片 FAQ](https://open.dingtalk.com/document/orgapp/faq-card)
 
-# 反馈
-
-您的反馈会帮助我们进一步完善钉钉互动卡片，欢迎提交反馈。
-
-[反馈入口](https://g.alicdn.com/aes/tracker-survey-preview/0.0.13/survey.html?pid=mE8hHE&id=3812)
 
