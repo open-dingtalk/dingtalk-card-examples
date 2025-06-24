@@ -1,0 +1,7 @@
+fastapi==0.115.12
+pydantic-settings==2.9.1
+uvicorn==0.34.2
+dingtalk-stream>=0.24.2
+loguru>=0.7.3
+python-dotenv>=1.0.0
+dashscope>=1.23.0

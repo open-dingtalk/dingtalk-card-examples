@@ -127,3 +127,26 @@ Steram 没有收到卡片交互组件的回传请求事件回调通常可以从�
 [互动卡片 FAQ](https://open.dingtalk.com/document/orgapp/faq-card)
 
 
+# 启动 FastAPI 服务
+
+app 目录是 FastAPI 服务的启动目录，该服务启动的时候也会启动 stream 服务监听用户给机器人发送消息的事件。
+
+启动后可以在 http://127.0.0.1:8000/docs 调用接口触发卡片投放，需先拷贝 .env.example 文件为 .env 文件，并填入下面这些信息：
+
+- 自己的通义千问 API KEY `DASHSCOPE_API_KEY`
+- 钉钉开放平台应用的 `CLIENT_ID` 和 `CLIENT_SECRET`
+- 测试用的用户 ID `USER_ID`
+
+依赖安装：
+
+```bash
+pip install -r requirements.txt
+```
+
+执行命令：
+
+```bash
+uvicorn app.main:app
+```
+
+该项目使用到的卡片模板在 app/card_templates 目录下。
