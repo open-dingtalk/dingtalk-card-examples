@@ -1,5 +1,7 @@
 import json
+import requests
 from loguru import logger
+from app.core.config import get_app_settings
 from app.stream.utils import convert_json_values_to_string
 from dingtalk_stream import (
     CallbackHandler,
@@ -7,6 +9,8 @@ from dingtalk_stream import (
     CardCallbackMessage,
     AckMessage,
 )
+
+app_settings = get_app_settings()
 
 
 class CardCallbackHandler(CallbackHandler):
@@ -41,12 +45,32 @@ class CardCallbackHandler(CallbackHandler):
                 "typeIndex": form_data.get("type", {}).get("index", -1),
             }
 
+        if action == "submit_like":
+            requests.post(
+                app_settings.webhook,
+                json={
+                    "action": "好评",
+                    "question": params.get("question", ""),
+                    "answer": params.get("origin_content", ""),
+                },
+            )
+
         if action == "submit_dislike":
             # 处理点踩提交
             self.logger.success(
                 f"点踩原因：{'、'.join(params.get('dislike_reason', []))}。自定义点踩原因：{params.get('custom_dislike_reason', '')}"
             )
             card_data["submitted"] = True
+            requests.post(
+                app_settings.webhook,
+                json={
+                    "action": "差评",
+                    "question": params.get("question", ""),
+                    "answer": params.get("origin_content", ""),
+                    "reason": ",".join(params.get("dislike_reason", [])),
+                    "custom_reason": params.get("custom_dislike_reason", ""),
+                },
+            )
 
         cardUpdateOptions = {
             "updateCardDataByKey": True,

@@ -52,14 +52,16 @@ class CardBotHandler(ChatbotHandler):
 
     async def process(self, callback: CallbackMessage):
         incoming_message = ChatbotMessage.from_dict(callback.data)
-        self.logger.info(incoming_message.sender_staff_id)  # 给机器人发消息的用户 userId
-        self.logger.info(incoming_message.conversation_id)  # 机器人在群里收到消息的群 cid
         content = (incoming_message.text.content or "").strip()
         self.logger.info(f"received message: {content}")
 
         card_template_id = "d70f026e-7148-4479-b089-8dcf60289b9d.schema"  # 导出的模板在 app/card_templates 目录下的 「智能回复.json」
         content_key = "content"
-        card_data = {content_key: "", "config": {"autoLayout": True}}
+        card_data = {
+            content_key: "",
+            "config": {"autoLayout": True},
+            "question": content,
+        }
         card_instance = AICardReplier(self.dingtalk_client, incoming_message)
 
         # 先投放卡片: https://open.dingtalk.com/document/orgapp/create-and-deliver-cards
@@ -90,6 +92,14 @@ class CardBotHandler(ChatbotHandler):
                 append=False,
                 finished=True,
                 failed=False,
+            )
+            await card_instance.async_put_card_data(
+                card_instance_id,
+                card_data={"origin_content": full_content_value},
+                cardUpdateOptions={
+                    "updateCardDataByKey": True,
+                    "updatePrivateDataByKey": True,
+                },
             )
         except Exception as e:
             self.logger.exception(e)

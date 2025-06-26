@@ -18,6 +18,7 @@ class AppSettings(BaseSettings):
     user_id: str = ""
     dashscope_api_key: str = ""
     dashscope_api_base: str = ""
+    webhook: str = ""
 
     api_prefix: str = "/api"
 
