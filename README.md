@@ -136,6 +136,7 @@ app 目录是 FastAPI 服务的启动目录，该服务启动的时候也会启�
 - 自己的通义千问 API KEY `DASHSCOPE_API_KEY`
 - 钉钉开放平台应用的 `CLIENT_ID` 和 `CLIENT_SECRET`
 - 测试用的用户 ID `USER_ID`
+- 上报数据到多维表的 webhook `WEBHOOK`
 
 依赖安装：
 
@@ -149,4 +150,4 @@ pip install -r requirements.txt
 uvicorn app.main:app
 ```
 
-该项目使用到的卡片模板在 app/card_templates 目录下。
+该项目使用到的卡片模板在 `app/card_templates` 目录下。
