@@ -45,7 +45,7 @@ class CardCallbackHandler(CallbackHandler):
                 "typeIndex": form_data.get("type", {}).get("index", -1),
             }
 
-        if action == "submit_like":
+        if action == "like":
             requests.post(
                 app_settings.webhook,
                 json={

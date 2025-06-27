@@ -151,3 +151,5 @@ uvicorn app.main:app
 ```
 
 该项目使用到的卡片模板在 `app/card_templates` 目录下。
+
+其中，`app/stream/chatbot_handler.py` 处理机器人接收消息，`app/stream/card_callback_handler.py` 处理卡片回传请求事件，`app/api/routes/notice.py` 主动给用户推送卡片。
